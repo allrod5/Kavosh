@@ -37,6 +37,8 @@ namespace GD {
 		Class* cursor;
 	};
 
+	void PrintThat(GD::GraphList*);
+
 	void Enumerate(TNGraph&, long unsigned int, GD::GraphList*);
 
 	void Explore(TNGraph&, std::vector<std::vector<long unsigned int>>&, long unsigned int, std::vector<bool>&,
@@ -62,7 +64,9 @@ namespace GD {
 						std::vector<std::vector<long unsigned int>>&, std::vector<long unsigned int>&,
 						long unsigned int, std::string, TNGraph&, GD::GraphList*);
 
-	void ExportGDF(TNGraph&, std::vector<std::vector<long unsigned int>>&, std::vector<long unsigned int>&,
+	TNGraph* ConcatMotifs(TNGraph&, std::vector<std::vector<long unsigned int>>&, GD::GraphList*);
+
+	void ExportGDF(TNGraph&, std::vector<std::vector<long unsigned int>>*, std::vector<long unsigned int>*,
 					GD::GraphList*, std::string);
 
 	void PrintMotifs(TNGraph&, std::vector<std::vector<long unsigned int>>&, std::vector<long unsigned int>&,

@@ -1,5 +1,7 @@
 TODO
 
+- Improve speed
+- Preserve graph metadata
 - Setup minimal console interface
 - Add support to other graph formats
 - Add support to Windows

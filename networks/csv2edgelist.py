@@ -38,7 +38,7 @@ def main(argv):
 		counter = 0
 		for line in csv:
 			counter += 1
-			nodes = line.split('\t')
+			nodes = line.split(';')
 			if len(nodes) > 1:
 				for node in nodes:
 					if (int(node)-mod) not in nodelist:
@@ -60,7 +60,7 @@ def main(argv):
 		counter = 0
 		for line in csv:
 			counter += 1
-			nodes = line.split('\t')
+			nodes = line.split(';')
 			source = str(int(nodes[0])-mod)
 			
 			gap = 0
