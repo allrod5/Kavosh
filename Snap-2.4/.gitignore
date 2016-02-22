@@ -13,7 +13,7 @@ xcuserdata/
 build/
 
 # Compiler-generated files
-*.o
+#*.o
 *.dSYM/
 *.pyc
 
