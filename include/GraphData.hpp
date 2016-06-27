@@ -27,6 +27,7 @@ namespace GD {
 		Cell* ini;
 		Cell* cursor;
 	};
+
 	class ClassesList {
 	public:
 		ClassesList();
@@ -35,6 +36,14 @@ namespace GD {
 		Class* Search(char*);
 		Class* ini;
 		Class* cursor;
+	};
+
+	class MetaObject {
+	public:
+		MetaObject(PNGraph &);
+		~MetaObject();
+		TNGraph *G;
+		std::map<long unsigned int, std::vector<long unsigned int>*> *metaMap;
 	};
 
 	void PrintThat(GD::GraphList*);
@@ -64,13 +73,13 @@ namespace GD {
 						std::vector<std::vector<long unsigned int>>&, std::vector<long unsigned int>&,
 						long unsigned int, std::string, TNGraph&, GD::GraphList*);
 
-	TNGraph* ConcatMotifs(TNGraph&, std::vector<std::vector<long unsigned int>>&, GD::GraphList*);
+	TNGraph* ConcatMotifs(TNGraph&, std::vector<std::vector<long unsigned int>>&, GD::GraphList*, GD::MetaObject*);
 
 	void ExportGDF(TNGraph&, std::vector<std::vector<long unsigned int>>*, std::vector<long unsigned int>*,
-					GD::GraphList*, std::string);
+					GD::GraphList*, std::string, GD::MetaObject*);
 
 	void PrintMotifs(TNGraph&, std::vector<std::vector<long unsigned int>>&, std::vector<long unsigned int>&,
-					GD::GraphList*, std::string);
+					GD::GraphList*, std::string, GD::MetaObject*);
 
 	void SaveResults(TNGraph&, std::vector<std::vector<long unsigned int>>&, GD::GraphList*);
 

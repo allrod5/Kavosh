@@ -15,7 +15,7 @@ Compile with "g++ -Ofast -DDEBUG -march=native -flto -fwhole-program -o main mai
 #endif
 
 void Kavosh(std::string, std::string, int, int, int);
-void Kavosh(PNGraph&, std::string, int, int, int);
+void Kavosh(PNGraph&, std::string, int, int, int, GD::MetaObject*);
 
 int main(int argc, char* argv[]) {
 
@@ -113,10 +113,11 @@ int main(int argc, char* argv[]) {
 void Kavosh(std::string source, std::string destination, int metamotifs, int motif_size, int num_null_models) {
     char const* file_path = source.c_str();
     PNGraph G = TSnap::LoadEdgeList<PNGraph>(file_path, 0, 1);
-    Kavosh(G, destination, metamotifs, motif_size, num_null_models);
+    GD::MetaObject *metaObj = new GD::MetaObject(G);
+    Kavosh(G, destination, metamotifs, motif_size, num_null_models, metaObj);
 }
 
-void Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif_size, int num_null_models) {
+void Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif_size, int num_null_models, GD::MetaObject *metaObj) {
 
     uint64 start_time = GetTimeMs64();
 
@@ -228,15 +229,15 @@ void Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif_size,
 
     printf("\n%lu motifs found.\nTime elapsed: %lu ms\n Enumeration took %lu ms\n Classification took %lu ms\n Getting frequencies took %lu ms\n Discovering motifs took %lu ms\n", Motifs.size(), finish_time - start_time, enum_time, class_time, freq_time, t11-t10);
 
-    GD::ExportGDF(*G, &Motifs, &IDs, kSubgraphs, destination);
-    GD::PrintMotifs(*G, Motifs, IDs, kSubgraphs, destination);
+    GD::ExportGDF(*G, &Motifs, &IDs, kSubgraphs, destination, metaObj);
+    GD::PrintMotifs(*G, Motifs, IDs, kSubgraphs, destination, metaObj);
 
     if(metamotifs > 0) {
-        TNGraph *H = GD::ConcatMotifs(*G, Motifs, kSubgraphs);
-        GD::ExportGDF(*H, NULL, NULL, NULL, destination);
-        PNGraph H2 = (H);
+        TNGraph *H = GD::ConcatMotifs(*G, Motifs, kSubgraphs, metaObj);
+        GD::ExportGDF(*G, NULL, NULL, NULL, destination, metaObj);
+        PNGraph H2 = H;
         TSnap::SaveEdgeList(H2, "concatenated_motifs.txt");
-        Kavosh(H2, destination+"metamotifs/", metamotifs-1, motif_size, num_null_models);
+        Kavosh(H2, destination+"metamotifs/", metamotifs-1, motif_size, num_null_models, metaObj);
     }
 
     return;

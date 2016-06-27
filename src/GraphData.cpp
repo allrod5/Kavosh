@@ -36,6 +36,20 @@ void GD::GraphList::AddGraph() {
 	cursor = aux;
 }
 
+GD::MetaObject::MetaObject(PNGraph &G) {
+	this->G = &*G;
+	metaMap = new std::map<long unsigned int, std::vector<long unsigned int>*>;
+	for (TNGraph::TNodeI NI = this->G->BegNI(); NI < this->G->EndNI(); NI++) {
+		std::vector<long unsigned int> *v = new std::vector<long unsigned int>;
+		v->push_back(NI.GetId());
+		metaMap->emplace(NI.GetId(),v);
+	}
+}
+
+GD::MetaObject::~MetaObject() {
+
+}
+
 #ifdef DEBUG
 	int LEVEL = 0;
 	int COUNTER = 0;
@@ -420,7 +434,7 @@ void GD::DiscoverMotifs(std::vector<std::map<std::vector<long unsigned int>, lon
     #endif
 }
 
-TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::vector<long unsigned int>> &Motifs, GD::GraphList *kSubgraphs)
+TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::vector<long unsigned int>> &Motifs, GD::GraphList *kSubgraphs, GD::MetaObject *metaObj)
 {
 	#ifdef DEBUG
 		if(DEBUG_LEVEL>=1) {
@@ -428,12 +442,21 @@ TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::vector<long unsigned int>
 		}
 	#endif
 
+	std::map<long unsigned int, std::vector<long unsigned int>*> *metaMap = new std::map<long unsigned int, std::vector<long unsigned int>*>;
+
 	TNGraph *H = new TNGraph(G);
 	for(int m=0; m<Motifs.size(); m++) {
 		kSubgraphs->cursor = kSubgraphs->ini->next;
 		while(kSubgraphs->cursor) {
 			if(kSubgraphs->cursor->label==Motifs[m]) {
 				long unsigned int mNodeId = H->AddNode(-1);
+				std::vector<long unsigned int> *tmp = new std::vector<long unsigned int>;
+				for(int i=0; i<Motifs[m].size(); i++) {
+					std::vector<long unsigned int> *aux;
+					aux = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second;
+					tmp->insert(tmp->end(), aux->begin(), aux->end());;
+				}
+				metaMap->emplace(mNodeId, tmp);
 				#ifdef DEBUG
 					if(DEBUG_LEVEL>=2) {
 						printf("Node %lu = (", mNodeId);
@@ -471,6 +494,9 @@ TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::vector<long unsigned int>
 		}
 	}
 
+	// FIXME Memory leak!?
+	metaObj->metaMap = metaMap;
+
 	#ifdef DEBUG
 		if(DEBUG_LEVEL>=1) {
 			printf("Removing vertices from motifs...\n");
@@ -497,32 +523,52 @@ TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::vector<long unsigned int>
 		}
 	}
 
+	#ifdef DEBUG
+		if(DEBUG_LEVEL>=1) {
+			printf("Defragmenting motifs graph...\n");
+		}
+	#endif
 	H->Defrag();
 
 	return H;
 }
 
 void GD::ExportGDF(TNGraph &G, std::vector<std::vector<long unsigned int>> *Motifs, std::vector<long unsigned int> *IDs,
-					 GD::GraphList *kSubgraphs, std::string destination)
+					GD::GraphList *kSubgraphs, std::string destination, GD::MetaObject *metaObj)
 {
 	int size;
-	if(Motifs!=NULL)
+	if(Motifs!=NULL) {
 		size = Motifs->size();
-	else
+	} else {
 		size = 1;
+	}
+
+	#ifdef DEBUG
+		if(DEBUG_LEVEL>=1) {
+			printf("Exporting to GDF...\n");
+		}
+	#endif
+
+	#ifdef DEBUG
+		if(DEBUG_LEVEL>=1) {
+			printf("Marking vertices to be colored as motifs...\n");
+		}
+	#endif
 	for(int m=0; m<size; m++) {
-		std::vector<bool> marker(G.GetNodes(),false);
+		std::vector<bool> marker(metaObj->G->GetNodes(), false);	// vector to mark which nodes will be colored as being part of a motif
 		if(Motifs!=NULL) {
 			kSubgraphs->cursor = kSubgraphs->ini->next;
 			while(kSubgraphs->cursor) {
 				if(kSubgraphs->cursor->label==Motifs->at(m)) {
-					for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++)
-						marker[kSubgraphs->cursor->vertices.at(i)] = true;
+					for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
+						std::vector<long unsigned int> *tmp = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second;
+						for(std::vector<long unsigned int>::iterator it = tmp->begin(); it != tmp->end(); ++it)
+							marker[*it] = true;
+					}
 				}
 				kSubgraphs->cursor = kSubgraphs->cursor->next;
 			}
 		}
-
 		std::stringstream ss;
 		if(Motifs!=NULL)
 			ss << destination << "motif_ID" << IDs->at(m) << "_highlighted.gdf";
@@ -533,6 +579,7 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::vector<long unsigned int>> *Moti
 		std::ofstream GDF;
 		GDF.open(path);
 		GDF << "nodedef>name VARCHAR,color VARCHAR\n";
+
 		/*for(long unsigned int i=0; i<marker.size(); i++) {
 			GDF << i << ",";
 			if(marker[i]) GDF << "'255,0,0'\n";
@@ -546,33 +593,77 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::vector<long unsigned int>> *Moti
 		}
 		GDF << "edgedef>node1 VARCHAR,node2 VARCHAR,directed BOOLEAN,color VARCHAR\n";
 
+		#ifdef DEBUG
+			if(DEBUG_LEVEL>=1) {
+				printf("Marking edges to be colored as motifs...\n");
+			}
+		#endif
 		TNGraph T(G);
 		if(Motifs!=NULL) {
 			kSubgraphs->cursor = kSubgraphs->ini->next;
 			while(kSubgraphs->cursor) {
+				std::cerr << "\n";
 				if(kSubgraphs->cursor->label==Motifs->at(m)) {
 					for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
 						for(int j=0; j<kSubgraphs->cursor->vertices.size(); j++) {
+							//std::cerr << "···";
 							if((T.GetNI(kSubgraphs->cursor->vertices.at(i))).IsOutNId(kSubgraphs->cursor->vertices.at(j))) {
-								GDF << kSubgraphs->cursor->vertices.at(i) << "," << kSubgraphs->cursor->vertices.at(j) << ",true,'255,0,0'\n";
-								T.DelEdge(kSubgraphs->cursor->vertices.at(i), kSubgraphs->cursor->vertices.at(j));
+								std::vector<long unsigned int> *tmp = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second;
+								std::vector<long unsigned int> *aux = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(j))->second;
+								tmp->insert(tmp->end(), aux->begin(), aux->end());
+								for(std::vector<long unsigned int>::iterator it0 = tmp->begin(); it0 != tmp->end(); ++it0) {
+									for(std::vector<long unsigned int>::iterator it1 = tmp->begin(); it1 != tmp->end(); ++it1) {
+										if(*it0!=*it1 && metaObj->G->GetNI(*it0).IsOutNId(*it1)) {
+											GDF << *it0 << "," << *it1 << ",true,'255,0,0'\n";
+											T.DelEdge(kSubgraphs->cursor->vertices.at(i), kSubgraphs->cursor->vertices.at(j));
+										}
+									}
+								}
 							}
 						}
 					}
 				}
+				std::cerr << "\n";
 				kSubgraphs->cursor = kSubgraphs->cursor->next;
+			}
+			printf("\n\nHMM\n\n");
+		}
+
+		#ifdef DEBUG
+			if(DEBUG_LEVEL>=1) {
+				printf("Inserting remaining edges...\n");
+			}
+		#endif
+		for(TNGraph::TEdgeI EI = T.BegEI(); EI < T.EndEI(); EI++) {
+			//std::vector<long unsigned int> tmp(metaObj->metaMap->find(EI.GetSrcNId())->second);
+			std::vector<long unsigned int> *tmp = new std::vector<long unsigned int>;
+			std::vector<long unsigned int> *aux = metaObj->metaMap->find(EI.GetSrcNId())->second;
+			for(std::vector<long unsigned int>::iterator it = aux->begin(); it != aux->end(); it++) {
+				tmp->push_back(*it);
+			}
+			aux = metaObj->metaMap->find(EI.GetDstNId())->second;
+			tmp->insert(tmp->end(), aux->begin(), aux->end());
+			for(std::vector<long unsigned int>::iterator it0 = tmp->begin(); it0 != tmp->end(); ++it0) {
+				for(std::vector<long unsigned int>::iterator it1 = tmp->begin(); it1 != tmp->end(); ++it1) {
+					if(*it0!=*it1 && metaObj->G->GetNI(*it0).IsOutNId(*it1)) {
+						GDF << *it0 << "," << *it1 << ",true,'0,0,0'\n";
+					}
+				}
 			}
 		}
 
-		for(TNGraph::TEdgeI EI = T.BegEI(); EI < T.EndEI(); EI++)
-			GDF << EI.GetSrcNId() << "," << EI.GetDstNId() << ",true,'0,0,0'\n";
-
+		#ifdef DEBUG
+			if(DEBUG_LEVEL>=1) {
+				printf("Saving GDF...\n");
+			}
+		#endif
 		GDF.close();
 	}
+	printf("metaObj->G nodes: %d\n", metaObj->G->GetNodes());
 }
 
 void GD::PrintMotifs(TNGraph &G, std::vector<std::vector<long unsigned int>> &Motifs, std::vector<long unsigned int> &IDs,
-					 GD::GraphList *kSubgraphs, std::string destination)
+					 GD::GraphList *kSubgraphs, std::string destination, GD::MetaObject *metaObj)
 {
 	for(int m=0; m<Motifs.size(); m++) {
 		PNGraph motif = TNGraph::New();
@@ -581,20 +672,31 @@ void GD::PrintMotifs(TNGraph &G, std::vector<std::vector<long unsigned int>> &Mo
 		while(kSubgraphs->cursor->label!=Motifs[m])
 			kSubgraphs->cursor = kSubgraphs->cursor->next;
 
-		for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++)
-			motif->AddNode(kSubgraphs->cursor->vertices.at(i));
-
-		for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++)
-			for(int j=0; j<kSubgraphs->cursor->vertices.size(); j++)
-				if((G.GetNI(kSubgraphs->cursor->vertices.at(i))).IsOutNId(kSubgraphs->cursor->vertices.at(j)))
-					motif->AddEdge(kSubgraphs->cursor->vertices.at(i),kSubgraphs->cursor->vertices.at(j));
-
+		for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
+			std::vector<long unsigned int> *tmp = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second;
+			for(std::vector<long unsigned int>::iterator it = tmp->begin(); it != tmp->end(); ++it) {
+				motif->AddNode(*it);
+			}
+		}
+		for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
+			for(int j=0; j<kSubgraphs->cursor->vertices.size(); j++) {
+				std::vector<long unsigned int> *tmp = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second;
+				std::vector<long unsigned int> *aux = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(j))->second;
+				tmp->insert(tmp->end(), aux->begin(), aux->end());
+				for(std::vector<long unsigned int>::iterator it0 = tmp->begin(); it0 != tmp->end(); ++it0) {
+					for(std::vector<long unsigned int>::iterator it1 = tmp->begin(); it1 != tmp->end(); ++it1) {
+						if(*it0!=*it1 && metaObj->G->GetNI(*it0).IsOutNId(*it1)) {
+							motif->AddEdge(*it0,*it1);
+						}
+					}
+				}
+			}
+		}
 		std::stringstream ss;
 		ss << destination << "motif_ID" << IDs[m] << ".png";
 		std::string s = ss.str();
 		const char* path = s.c_str();
 		TSnap::DrawGViz<PNGraph>(motif, gvlDot, path, "", NULL);
-
 	}
 }
 
