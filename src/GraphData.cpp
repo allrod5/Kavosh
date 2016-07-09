@@ -450,13 +450,13 @@ TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::vector<long unsigned int>
 		while(kSubgraphs->cursor) {
 			if(kSubgraphs->cursor->label==Motifs[m]) {
 				long unsigned int mNodeId = H->AddNode(-1);
-				std::vector<long unsigned int> *tmp = new std::vector<long unsigned int>;
+				std::vector<long unsigned int> *aux = new std::vector<long unsigned int>;
 				for(int i=0; i<Motifs[m].size(); i++) {
-					std::vector<long unsigned int> *aux;
-					aux = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second;
-					tmp->insert(tmp->end(), aux->begin(), aux->end());;
+					std::vector<long unsigned int> *tmp;
+					tmp = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second;
+					aux->insert(aux->end(), tmp->begin(), tmp->end());
 				}
-				metaMap->emplace(mNodeId, tmp);
+				metaMap->emplace(mNodeId, aux);
 				#ifdef DEBUG
 					if(DEBUG_LEVEL>=2) {
 						printf("Node %lu = (", mNodeId);
@@ -608,11 +608,11 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::vector<long unsigned int>> *Moti
 						for(int j=0; j<kSubgraphs->cursor->vertices.size(); j++) {
 							//std::cerr << "···";
 							if((T.GetNI(kSubgraphs->cursor->vertices.at(i))).IsOutNId(kSubgraphs->cursor->vertices.at(j))) {
-								std::vector<long unsigned int> *tmp = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second;
-								std::vector<long unsigned int> *aux = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(j))->second;
-								tmp->insert(tmp->end(), aux->begin(), aux->end());
-								for(std::vector<long unsigned int>::iterator it0 = tmp->begin(); it0 != tmp->end(); ++it0) {
-									for(std::vector<long unsigned int>::iterator it1 = tmp->begin(); it1 != tmp->end(); ++it1) {
+								std::vector<long unsigned int> tmp(*(metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second));
+								std::vector<long unsigned int> aux(*(metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(j))->second));
+								aux.insert(aux.end(), tmp.begin(), tmp.end());
+								for(std::vector<long unsigned int>::iterator it0 = aux.begin(); it0 != aux.end(); ++it0) {
+									for(std::vector<long unsigned int>::iterator it1 = aux.begin(); it1 != aux.end(); ++it1) {
 										if(*it0!=*it1 && metaObj->G->GetNI(*it0).IsOutNId(*it1)) {
 											GDF << *it0 << "," << *it1 << ",true,'255,0,0'\n";
 											T.DelEdge(kSubgraphs->cursor->vertices.at(i), kSubgraphs->cursor->vertices.at(j));
@@ -636,15 +636,15 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::vector<long unsigned int>> *Moti
 		#endif
 		for(TNGraph::TEdgeI EI = T.BegEI(); EI < T.EndEI(); EI++) {
 			//std::vector<long unsigned int> tmp(metaObj->metaMap->find(EI.GetSrcNId())->second);
-			std::vector<long unsigned int> *tmp = new std::vector<long unsigned int>;
-			std::vector<long unsigned int> *aux = metaObj->metaMap->find(EI.GetSrcNId())->second;
-			for(std::vector<long unsigned int>::iterator it = aux->begin(); it != aux->end(); it++) {
-				tmp->push_back(*it);
+			std::vector<long unsigned int> aux;
+			std::vector<long unsigned int> tmp(*(metaObj->metaMap->find(EI.GetSrcNId())->second));
+			for(std::vector<long unsigned int>::iterator it = tmp.begin(); it != tmp.end(); it++) {
+				aux.push_back(*it);
 			}
-			aux = metaObj->metaMap->find(EI.GetDstNId())->second;
-			tmp->insert(tmp->end(), aux->begin(), aux->end());
-			for(std::vector<long unsigned int>::iterator it0 = tmp->begin(); it0 != tmp->end(); ++it0) {
-				for(std::vector<long unsigned int>::iterator it1 = tmp->begin(); it1 != tmp->end(); ++it1) {
+			tmp = metaObj->metaMap->find(EI.GetDstNId())->second;
+			aux.insert(aux.end(), tmp.begin(), tmp.end());
+			for(std::vector<long unsigned int>::iterator it0 = aux.begin(); it0 != aux.end(); ++it0) {
+				for(std::vector<long unsigned int>::iterator it1 = aux.begin(); it1 != aux.end(); ++it1) {
 					if(*it0!=*it1 && metaObj->G->GetNI(*it0).IsOutNId(*it1)) {
 						GDF << *it0 << "," << *it1 << ",true,'0,0,0'\n";
 					}
