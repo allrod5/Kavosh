@@ -233,8 +233,11 @@ void Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif_size,
     GD::PrintMotifs(*G, Motifs, IDs, kSubgraphs, destination, metaObj);
 
     if(metamotifs > 0) {
+        std::cerr << "AUA\n";
         TNGraph *H = GD::ConcatMotifs(*G, Motifs, kSubgraphs, metaObj);
+        std::cerr << "BB\n";
         GD::ExportGDF(*G, NULL, NULL, NULL, destination, metaObj);
+        std::cerr << "CC\n";
         PNGraph H2 = H;
         TSnap::SaveEdgeList(H2, "concatenated_motifs.txt");
         Kavosh(H2, destination+"metamotifs/", metamotifs-1, motif_size, num_null_models, metaObj);

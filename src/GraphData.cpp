@@ -602,7 +602,7 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::vector<long unsigned int>> *Moti
 		if(Motifs!=NULL) {
 			kSubgraphs->cursor = kSubgraphs->ini->next;
 			while(kSubgraphs->cursor) {
-				std::cerr << "\n";
+				//std::cerr << "\n";
 				if(kSubgraphs->cursor->label==Motifs->at(m)) {
 					for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
 						for(int j=0; j<kSubgraphs->cursor->vertices.size(); j++) {
@@ -623,7 +623,7 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::vector<long unsigned int>> *Moti
 						}
 					}
 				}
-				std::cerr << "\n";
+				//std::cerr << "\n";
 				kSubgraphs->cursor = kSubgraphs->cursor->next;
 			}
 			printf("\n\nHMM\n\n");
@@ -634,14 +634,14 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::vector<long unsigned int>> *Moti
 				printf("Inserting remaining edges...\n");
 			}
 		#endif
-		for(TNGraph::TEdgeI EI = T.BegEI(); EI < T.EndEI(); EI++) {
+		/*for(TNGraph::TEdgeI EI = T.BegEI(); EI < T.EndEI(); EI++) {
 			//std::vector<long unsigned int> tmp(metaObj->metaMap->find(EI.GetSrcNId())->second);
 			std::vector<long unsigned int> aux;
 			std::vector<long unsigned int> tmp(*(metaObj->metaMap->find(EI.GetSrcNId())->second));
 			for(std::vector<long unsigned int>::iterator it = tmp.begin(); it != tmp.end(); it++) {
 				aux.push_back(*it);
 			}
-			tmp = metaObj->metaMap->find(EI.GetDstNId())->second;
+			tmp = *(metaObj->metaMap->find(EI.GetDstNId())->second);
 			aux.insert(aux.end(), tmp.begin(), tmp.end());
 			for(std::vector<long unsigned int>::iterator it0 = aux.begin(); it0 != aux.end(); ++it0) {
 				for(std::vector<long unsigned int>::iterator it1 = aux.begin(); it1 != aux.end(); ++it1) {
@@ -650,7 +650,9 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::vector<long unsigned int>> *Moti
 					}
 				}
 			}
-		}
+		}*/
+		for(TNGraph::TEdgeI EI = T.BegEI(); EI < T.EndEI(); EI++)
+			GDF << EI.GetSrcNId() << "," << EI.GetDstNId() << ",true,'0,0,0'\n";
 
 		#ifdef DEBUG
 			if(DEBUG_LEVEL>=1) {
@@ -673,18 +675,18 @@ void GD::PrintMotifs(TNGraph &G, std::vector<std::vector<long unsigned int>> &Mo
 			kSubgraphs->cursor = kSubgraphs->cursor->next;
 
 		for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
-			std::vector<long unsigned int> *tmp = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second;
-			for(std::vector<long unsigned int>::iterator it = tmp->begin(); it != tmp->end(); ++it) {
+			std::vector<long unsigned int> *aux = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second;
+			for(std::vector<long unsigned int>::iterator it = aux->begin(); it != aux->end(); ++it) {
 				motif->AddNode(*it);
 			}
 		}
 		for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
 			for(int j=0; j<kSubgraphs->cursor->vertices.size(); j++) {
-				std::vector<long unsigned int> *tmp = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second;
-				std::vector<long unsigned int> *aux = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(j))->second;
-				tmp->insert(tmp->end(), aux->begin(), aux->end());
-				for(std::vector<long unsigned int>::iterator it0 = tmp->begin(); it0 != tmp->end(); ++it0) {
-					for(std::vector<long unsigned int>::iterator it1 = tmp->begin(); it1 != tmp->end(); ++it1) {
+				std::vector<long unsigned int> aux(*(metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second));
+				std::vector<long unsigned int> tmp(*(metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(j))->second));
+				aux.insert(aux.end(), tmp.begin(), tmp.end());
+				for(std::vector<long unsigned int>::iterator it0 = aux.begin(); it0 != aux.end(); ++it0) {
+					for(std::vector<long unsigned int>::iterator it1 = aux.begin(); it1 != aux.end(); ++it1) {
 						if(*it0!=*it1 && metaObj->G->GetNI(*it0).IsOutNId(*it1)) {
 							motif->AddEdge(*it0,*it1);
 						}

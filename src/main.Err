@@ -348,3 +348,43 @@ Execution stopped: (0<=ValN)&&(ValN<Vals) [Reason:'Index:-1 Vals:1992 MxVals:199
 Mon Feb  1 21:46:03 2016
 Execution stopped: (0<=ValN)&&(ValN<Vals) [Reason:'Index:-1 Vals:1992 MxVals:1992 Type:4TVecI11THashKeyDatI4TIntN7TNGraph5TNodeEEiE'], file ../Snap-2.4/glib-core/ds.h, line 455
 --------
+--------
+/home/rodrigo/Documentos/UFABC/Iniciação Científica/PIBIC - 01.2015/Software/Kavosh/src/main.Err
+Sat Jul  9 12:36:24 2016
+Execution stopped: !IsNode(NId) [Reason:'NodeId 1 already exists'], file graph.cpp, line 212
+--------
+--------
+/home/rodrigo/Documentos/UFABC/Iniciação Científica/PIBIC - 01.2015/Software/Kavosh/src/main.Err
+Sat Jul  9 12:37:25 2016
+Execution stopped: !IsNode(NId) [Reason:'NodeId 1 already exists'], file graph.cpp, line 212
+--------
+--------
+/home/rodrigo/Documentos/UFABC/Iniciação Científica/PIBIC - 01.2015/Software/Kavosh/src/main.Err
+Sat Jul  9 12:37:51 2016
+Execution stopped: !IsNode(NId) [Reason:'NodeId 1 already exists'], file graph.cpp, line 212
+--------
+--------
+/home/rodrigo/Documentos/UFABC/Iniciação Científica/PIBIC - 01.2015/Software/Kavosh/src/main.Err
+Sat Jul  9 12:47:52 2016
+Execution stopped: !IsNode(NId) [Reason:'NodeId 1 already exists'], file graph.cpp, line 212
+--------
+--------
+/home/rodrigo/Documentos/UFABC/Iniciação Científica/PIBIC - 01.2015/Software/Kavosh/src/main.Err
+Sat Jul  9 12:48:35 2016
+Execution stopped: !IsNode(NId) [Reason:'NodeId 1 already exists'], file graph.cpp, line 212
+--------
+--------
+/home/rodrigo/Documentos/UFABC/Iniciação Científica/PIBIC - 01.2015/Software/Kavosh/src/main.Err
+Sat Jul  9 13:19:57 2016
+Execution stopped: !IsNode(NId) [Reason:'NodeId 1 already exists'], file graph.cpp, line 212
+--------
+--------
+/home/rodrigo/Documentos/UFABC/Iniciação Científica/PIBIC - 01.2015/Software/Kavosh/src/main.Err
+Sat Jul  9 13:20:47 2016
+Execution stopped: !IsNode(NId) [Reason:'NodeId 1 already exists'], file graph.cpp, line 212
+--------
+--------
+/home/rodrigo/Documentos/UFABC/Iniciação Científica/PIBIC - 01.2015/Software/Kavosh/src/main.Err
+Sat Jul  9 13:26:24 2016
+Execution stopped: !IsNode(NId) [Reason:'NodeId 1 already exists'], file graph.cpp, line 212
+--------
