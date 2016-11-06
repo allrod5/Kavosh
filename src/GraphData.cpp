@@ -210,17 +210,28 @@ void GD::updateIndex(std::vector<long unsigned int> &Index, long unsigned int n)
 void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n) {
     kSubgraphs->cursor = kSubgraphs->ini->next;
 
+
+    DYNALLSTAT(graph,g,g_sz);
+    DYNALLSTAT(graph,canon,canon_sz);
+    DYNALLSTAT(int,lab,lab_sz);
+    DYNALLSTAT(int,ptn,ptn_sz);
+    DYNALLSTAT(int,orbits,orbits_sz);
+    DEFAULTOPTIONS_GRAPH(options);
+    statsblk stats;
+    set *gv;
+
+    options.getcanon = TRUE;
+
+    int m = SETWORDSNEEDED(n);
+    nauty_check(WORDSIZE,m,n,NAUTYVERSIONID);
+
+    DYNALLOC2(graph,g,g_sz,m,n,"malloc");
+    DYNALLOC2(graph,canon,canon_sz,m,n,"malloc");
+    DYNALLOC1(int,lab,lab_sz,n,"malloc");
+    DYNALLOC1(int,ptn,ptn_sz,n,"malloc");
+    DYNALLOC1(int,orbits,orbits_sz,n,"malloc");
+
     while(kSubgraphs->cursor) {
-        graph g[n*n];
-        graph canon[n*n];
-        int lab[n],ptn[n],orbits[n];
-        static DEFAULTOPTIONS_DIGRAPH(options);
-        options.getcanon = TRUE;
-        statsblk stats;
-        set *gv;
-        int m = SETWORDSNEEDED(n);
-        nauty_check(WORDSIZE,m,n,NAUTYVERSIONID);
-        EMPTYGRAPH(canon,m,n);
         EMPTYGRAPH(g,m,n);
         for(long unsigned int i=0; i<n; i++) {
             long unsigned int a = kSubgraphs->cursor->vertices.at(i);
@@ -250,6 +261,15 @@ void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n) {
 
         kSubgraphs->cursor = kSubgraphs->cursor->next;
     }
+
+    DYNFREE(g,g_sz);
+    DYNFREE(canon,canon_sz);
+    DYNFREE(lab,lab_sz);
+    DYNFREE(ptn,ptn_sz);
+    DYNFREE(orbits,orbits_sz);
+    nauty_freedyn();
+    nautil_freedyn();
+    naugraph_freedyn();
 }
 
 TNGraph* GD::Randomize(TNGraph &G) {

@@ -21,6 +21,12 @@ void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomi
 
 int main(int argc, char* argv[]) {
 
+#if !HAVE_TLS
+    fprintf(stderr,">E This program needs to be linked with a version\n");
+    fprintf(stderr,"  of nauty successfully configured with --enable-tls.\n");
+    exit(1);
+#endif
+
     if (argc == 2) {
         if (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help") {
             std::cerr   << "\nKavosh algorithm implemented by Rodrigo Martins de Oliveira" << std::endl
@@ -94,7 +100,7 @@ int main(int argc, char* argv[]) {
                 value << argv[++i];
                 value >> t;
             } else {                                                    // Unsufficient arguments
-                std::cerr << "Option -r requires one argument!" << std::endl;
+                std::cerr << "Option -t requires one argument!" << std::endl;
                 return 1;
             }
         }  else if(std::string(argv[i]) == "--metamotifs") {
