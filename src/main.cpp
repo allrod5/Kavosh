@@ -13,8 +13,9 @@ Compile with "g++ -Ofast -DDEBUG -march=native -flto -fwhole-program -o main mai
     int DEBUG_LEVEL;
 #endif
 
+struct KavoshData;
 void Kavosh(std::string, std::string, int, int, int, int t);
-void Kavosh(PNGraph &, std::string, int, int, int, GD::MetaObject *, int t);
+KavoshData Kavosh(PNGraph &, std::string, int, int, int, GD::MetaObject &, int t);
 void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomic_int> counter, int num_null_models,
                            std::shared_ptr<std::vector<std::map<std::vector<
                                    long unsigned int>, long unsigned int>>> FVector);
@@ -129,18 +130,52 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
+struct KavoshData {
+    PNGraph G;
+    std::string destination;
+    int metamotifs;
+    int motif_size;
+    int num_null_models;
+    GD::MetaObject *metaObj;
+    int t;
 
-void
-Kavosh(std::string source, std::string destination, int metamotifs, int motif_size, int num_null_models, int t) {
+    KavoshData(PNGraph G, std::string destination, int metamotifs, int motif_size, int num_null_models,
+               GD::MetaObject metaObj, int t) {
+        this->G = G;
+        this->destination = destination;
+        this->metamotifs = metamotifs;
+        this->motif_size = motif_size;
+        this->num_null_models = num_null_models;
+        this->metaObj = &metaObj;
+        this->t = t;
+    }
+};
+
+void Kavosh(std::string source, std::string destination, int metamotifs, int motif_size, int num_null_models, int t) {
     char const* file_path = source.c_str();
     PNGraph G = TSnap::LoadEdgeList<PNGraph>(file_path, 0, 1);
-    GD::MetaObject *metaObj = new GD::MetaObject(G);
-    Kavosh(G, destination, metamotifs, motif_size, num_null_models, metaObj, t);
+    GD::MetaObject metaObj(G);
+    KavoshData kd(G, destination, metamotifs, motif_size, num_null_models, metaObj, t);
+    while (kd.metamotifs>=0) {
+        kd = Kavosh(kd.G, kd.destination, kd.metamotifs, kd.motif_size, kd.num_null_models, *kd.metaObj, kd.t);
+    }
 }
 
-void Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif_size, int num_null_models,
-            GD::MetaObject *metaObj, int t)
+KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif_size, int num_null_models,
+            GD::MetaObject &metaObj, int t)
 {
+
+    // FIXME: Cross-platform
+    // Make sure output directories exist
+    /*std::string command = "mkdir " + destination;
+    system(command.c_str());
+    if (metamotifs > 0) {
+        command =  "mkdir " + destination;
+        for (int i=0; i<metamotifs; i++) {
+            command += "/metamotifs";
+            system(command.c_str());
+        }
+    }*/
 
     uint64 start_time = GetTimeMs64();
 
@@ -218,21 +253,16 @@ void Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif_size,
                    "Getting frequencies took %u ms\n Discovering motifs took %u ms\n", Motifs.size(),
            finish_time - start_time, enum_time, class_time, freq_time, t11-t10);
 
-    GD::ExportGDF(*G, &Motifs, &IDs, kSubgraphs, destination, metaObj);
-    GD::PrintMotifs(*G, Motifs, IDs, kSubgraphs, destination, metaObj);
+    GD::ExportGDF(*G, &Motifs, &IDs, kSubgraphs, destination, &metaObj);
+    GD::PrintMotifs(*G, Motifs, IDs, kSubgraphs, destination, &metaObj);
 
-    if(metamotifs > 0) {
-        std::cerr << "AUA\n";
-        TNGraph *H = GD::ConcatMotifs(*G, Motifs, kSubgraphs, metaObj);
-        std::cerr << "BB\n";
-        GD::ExportGDF(*G, NULL, NULL, NULL, destination, metaObj);
-        std::cerr << "CC\n";
-        PNGraph H2 = H;
-        TSnap::SaveEdgeList(H2, "concatenated_motifs.txt");
-        Kavosh(H2, destination + "metamotifs/", metamotifs - 1, motif_size, num_null_models, metaObj, 0);
-    }
+    TNGraph *H = GD::ConcatMotifs(*G, Motifs, kSubgraphs, &metaObj);
+    GD::ExportGDF(*G, NULL, NULL, NULL, destination, &metaObj);
+    PNGraph H2 = H;
+    TSnap::SaveEdgeList(H2, "concatenated_motifs.txt");
+    //Kavosh(H2, destination + "metamotifs/", metamotifs - 1, motif_size, num_null_models, metaObj, 0);
 
-    return;
+    return KavoshData(H2, destination + "metamotifs/", metamotifs - 1, motif_size, num_null_models, metaObj, 0);
 }
 
 void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomic_int> counter, int num_null_models,
