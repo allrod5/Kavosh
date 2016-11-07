@@ -54,7 +54,7 @@ namespace GD {
 
     void updateIndex(std::vector<long unsigned int>&, long unsigned int);
 
-    void Classify(TNGraph&, GD::GraphList*, long unsigned int);
+    void Classify(TNGraph&, GD::GraphList*, long unsigned int, optionblk&);
 
     TNGraph* Randomize(TNGraph&);
 

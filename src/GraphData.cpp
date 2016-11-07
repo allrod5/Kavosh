@@ -207,7 +207,7 @@ void GD::updateIndex(std::vector<long unsigned int> &Index, long unsigned int n)
             Index[i] = Index[i-1];
 }
 
-void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n) {
+void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n, optionblk &options) {
     kSubgraphs->cursor = kSubgraphs->ini->next;
 
 
@@ -216,11 +216,10 @@ void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n) {
     DYNALLSTAT(int,lab,lab_sz);
     DYNALLSTAT(int,ptn,ptn_sz);
     DYNALLSTAT(int,orbits,orbits_sz);
-    DEFAULTOPTIONS_GRAPH(options);
+    DYNALLSTAT(set,dnwork,dnwork_sz);
+
     statsblk stats;
     set *gv;
-
-    options.getcanon = TRUE;
 
     int m = SETWORDSNEEDED(n);
     nauty_check(WORDSIZE,m,n,NAUTYVERSIONID);
@@ -230,6 +229,7 @@ void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n) {
     DYNALLOC1(int,lab,lab_sz,n,"malloc");
     DYNALLOC1(int,ptn,ptn_sz,n,"malloc");
     DYNALLOC1(int,orbits,orbits_sz,n,"malloc");
+    DYNALLOC1(set,dnwork,dnwork_sz,2*60*m,"densenauty malloc");
 
     while(kSubgraphs->cursor) {
         EMPTYGRAPH(g,m,n);
@@ -243,7 +243,8 @@ void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n) {
             }
         }
 
-        densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canon);
+        //densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canon);
+        nauty(g,lab,ptn,NULL,orbits,&options,&stats,dnwork,2*60*m,m,n,canon);
         for(long unsigned int i=0; i<m*n; i++)
             kSubgraphs->cursor->label.push_back(canon[i]);
         #ifdef DEBUG

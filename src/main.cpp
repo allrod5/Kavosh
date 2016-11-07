@@ -18,7 +18,7 @@ void Kavosh(std::string, std::string, int, int, int, int t);
 KavoshData Kavosh(PNGraph &, std::string, int, int, int, GD::MetaObject &, int t);
 void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomic_int> counter, int num_null_models,
                            std::shared_ptr<std::vector<std::map<std::vector<
-                                   long unsigned int>, long unsigned int>>> FVector);
+                                   long unsigned int>, long unsigned int>>> FVector, optionblk options);
 
 int main(int argc, char* argv[]) {
 
@@ -193,6 +193,8 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
             (new std::vector<std::map<std::vector<long unsigned int>, long unsigned int>>(num_null_models+1));
     std::vector<std::thread> threads;
     std::shared_ptr<std::atomic_int> shared_counter (new std::atomic_int (0));
+    static DEFAULTOPTIONS_GRAPH(options);
+    options.getcanon = TRUE;
     //read input
     //PNGraph G = TSnap::LoadEdgeList<PNGraph>(file_path, 0, 1);
 
@@ -211,7 +213,7 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
             printf("Enumeration done!\nStarting classification...\n");
     #endif
     uint64 t1 = GetTimeMs64();
-    GD::Classify(*G, kSubgraphs, motif_size);
+    GD::Classify(*G, kSubgraphs, motif_size, options);
     #ifdef DEBUG
         if(DEBUG_LEVEL>=2)
             printf("Classification done!\nGetting frequencies...\n");
@@ -232,10 +234,8 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
     class_time += t2-t1;
     freq_time += t3-t2;
 
-
-
     for(int i=0; i<t; i++) threads.push_back(
-                std::thread(proccessRandomNetwork, G, motif_size, shared_counter, num_null_models, FVectorPtr));
+                std::thread(proccessRandomNetwork, G, motif_size, shared_counter, num_null_models, FVectorPtr, options));
 
     for(auto& th : threads) th.join();
 
@@ -267,10 +267,13 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
 
 void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomic_int> counter, int num_null_models,
                            std::shared_ptr<std::vector<std::map<std::vector
-                                   <long unsigned int>, long unsigned int>>> FVector)
+                                   <long unsigned int>, long unsigned int>>> FVector, optionblk options)
 {
     uint64 t3 = GetTimeMs64();
     for(int pos = counter->fetch_add(1); pos <= num_null_models; pos = counter->fetch_add(1)) {
+        if (pos%100==0)
+            std::cerr << pos << std::endl;
+
         GD::GraphList *kRSubgraphs = new GD::GraphList;
         uint64 t4 = GetTimeMs64();
         #ifdef DEBUG
@@ -300,7 +303,7 @@ void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomi
         uint64 t6 = GetTimeMs64();
         GD::Enumerate(*R, motif_size, kRSubgraphs);
         uint64 t7 = GetTimeMs64();
-        GD::Classify(*R, kRSubgraphs, motif_size);
+        GD::Classify(*R, kRSubgraphs, motif_size, options);
         uint64 t8 = GetTimeMs64();
         GD::GetFrequencies(kRSubgraphs, FVector->at(pos));
         uint64 t9 = GetTimeMs64();
