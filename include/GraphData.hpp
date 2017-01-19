@@ -7,6 +7,7 @@
 #undef min
 #include <vector>
 #include <map>
+#include <set>
 #include "gtools.h"
 #include "nauty.h"
 //#include "nausparse.h"
@@ -30,6 +31,7 @@ namespace GD {
 
     class MetaObject {
     public:
+        MetaObject(MetaObject&);
         MetaObject(PNGraph &);
         ~MetaObject();
         TNGraph *G;
@@ -54,22 +56,22 @@ namespace GD {
 
     void updateIndex(std::vector<long unsigned int>&, long unsigned int);
 
-    void Classify(TNGraph&, GD::GraphList*, long unsigned int, optionblk&);
+    void Classify(TNGraph&, GD::GraphList*, long unsigned int, optionblk&, int, set*);
 
     TNGraph* Randomize(TNGraph&);
 
-    void GetFrequencies(GD::GraphList*, std::map<std::vector<long unsigned int>, long unsigned int>&);
+    void GetFrequencies(GD::GraphList*, std::map<std::multiset<long unsigned int>, long unsigned int>&);
 
-    void DiscoverMotifs(std::vector<std::map<std::vector<long unsigned int>, long unsigned int>>&,
-                        std::vector<std::vector<long unsigned int>>&, std::vector<long unsigned int>&,
+    void DiscoverMotifs(std::vector<std::map<std::multiset<long unsigned int>, long unsigned int>>&,
+                        std::vector<std::multiset<long unsigned int>>&, std::vector<long unsigned int>&,
                         long unsigned int, std::string, TNGraph&, GD::GraphList*);
 
-    TNGraph* ConcatMotifs(TNGraph&, std::vector<std::vector<long unsigned int>>&, GD::GraphList*, GD::MetaObject*);
+    TNGraph* ConcatMotifs(TNGraph&, std::vector<std::multiset<long unsigned int>>&, GD::GraphList*, GD::MetaObject*);
 
-    void ExportGDF(TNGraph&, std::vector<std::vector<long unsigned int>>*, std::vector<long unsigned int>*,
+    void ExportGDF(TNGraph&, std::vector<std::multiset<long unsigned int>>*, std::vector<long unsigned int>*,
                     GD::GraphList*, std::string, GD::MetaObject*);
 
-    void PrintMotifs(TNGraph&, std::vector<std::vector<long unsigned int>>&, std::vector<long unsigned int>&,
+    void PrintMotifs(TNGraph&, std::vector<std::multiset<long unsigned int>>&, std::vector<long unsigned int>&,
                     GD::GraphList*, std::string, GD::MetaObject*);
 
     void SaveResults(TNGraph&, std::vector<std::vector<long unsigned int>>&, GD::GraphList*);

@@ -5,10 +5,11 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
+#include <bits/stl_set.h>
 
 struct GD::Cell {
     std::vector<long unsigned int> vertices;
-    std::vector<long unsigned int> label;
+    std::multiset<long unsigned int> label;
     Cell* next = NULL;
 };
 
@@ -44,6 +45,11 @@ GD::MetaObject::MetaObject(PNGraph &G) {
 
 GD::MetaObject::~MetaObject() {
 
+}
+
+GD::MetaObject::MetaObject(GD::MetaObject &metaObj) {
+    this->G = new TNGraph(*metaObj.G);
+    this->metaMap = metaObj.metaMap;
 }
 
 #ifdef DEBUG
@@ -207,7 +213,7 @@ void GD::updateIndex(std::vector<long unsigned int> &Index, long unsigned int n)
             Index[i] = Index[i-1];
 }
 
-void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n, optionblk &options) {
+void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n, optionblk &options, int m, set *dnwork) {
     kSubgraphs->cursor = kSubgraphs->ini->next;
 
 
@@ -216,20 +222,15 @@ void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n, op
     DYNALLSTAT(int,lab,lab_sz);
     DYNALLSTAT(int,ptn,ptn_sz);
     DYNALLSTAT(int,orbits,orbits_sz);
-    DYNALLSTAT(set,dnwork,dnwork_sz);
 
     statsblk stats;
     set *gv;
-
-    int m = SETWORDSNEEDED(n);
-    nauty_check(WORDSIZE,m,n,NAUTYVERSIONID);
 
     DYNALLOC2(graph,g,g_sz,m,n,"malloc");
     DYNALLOC2(graph,canon,canon_sz,m,n,"malloc");
     DYNALLOC1(int,lab,lab_sz,n,"malloc");
     DYNALLOC1(int,ptn,ptn_sz,n,"malloc");
     DYNALLOC1(int,orbits,orbits_sz,n,"malloc");
-    DYNALLOC1(set,dnwork,dnwork_sz,2*60*m,"densenauty malloc");
 
     while(kSubgraphs->cursor) {
         EMPTYGRAPH(g,m,n);
@@ -246,7 +247,7 @@ void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n, op
         //densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canon);
         nauty(g,lab,ptn,NULL,orbits,&options,&stats,dnwork,2*60*m,m,n,canon);
         for(long unsigned int i=0; i<m*n; i++)
-            kSubgraphs->cursor->label.push_back(canon[i]);
+            kSubgraphs->cursor->label.insert(canon[i]);
         #ifdef DEBUG
             if(DEBUG_LEVEL>=3) {
                 for(long unsigned int i=0; i<kSubgraphs->cursor->label.size(); i++) {
@@ -268,9 +269,9 @@ void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n, op
     DYNFREE(lab,lab_sz);
     DYNFREE(ptn,ptn_sz);
     DYNFREE(orbits,orbits_sz);
-    nauty_freedyn();
-    nautil_freedyn();
-    naugraph_freedyn();
+    //nauty_freedyn();
+    //nautil_freedyn();
+    //naugraph_freedyn();
 }
 
 TNGraph* GD::Randomize(TNGraph &G) {
@@ -298,13 +299,13 @@ TNGraph* GD::Randomize(TNGraph &G) {
     return R;
 }
 
-void GD::GetFrequencies(GD::GraphList* kSubgraphs, std::map<std::vector<long unsigned int>, long unsigned int> &Frequencies) {
+void GD::GetFrequencies(GD::GraphList* kSubgraphs, std::map<std::multiset<long unsigned int>, long unsigned int> &Frequencies) {
     kSubgraphs->cursor = kSubgraphs->ini->next;
     while(kSubgraphs->cursor) {
         Frequencies[kSubgraphs->cursor->label]++;
         kSubgraphs->cursor = kSubgraphs->cursor->next;
     }
-    std::map<std::vector<long unsigned int>, long unsigned int>::iterator it;
+    std::map<std::multiset<long unsigned int>, long unsigned int>::iterator it;
     #ifdef DEBUG
         if(DEBUG_LEVEL>=3)
             for(it = Frequencies.begin(); it != Frequencies.end(); it++) {
@@ -315,11 +316,11 @@ void GD::GetFrequencies(GD::GraphList* kSubgraphs, std::map<std::vector<long uns
     #endif
 }
 
-void GD::DiscoverMotifs(std::vector<std::map<std::vector<long unsigned int>, long unsigned int>> &FVector,
-                        std::vector<std::vector<long unsigned int>> &Motifs, std::vector<long unsigned int> &IDs,
+void GD::DiscoverMotifs(std::vector<std::map<std::multiset<long unsigned int>, long unsigned int>> &FVector,
+                        std::vector<std::multiset<long unsigned int>> &Motifs, std::vector<long unsigned int> &IDs,
                         long unsigned int motif_size, std::string destination, TNGraph &G, GD::GraphList *kSubgraphs)
 {
-    std::map<std::vector<long unsigned int>, long unsigned int>::iterator i;
+    std::map<std::multiset<long unsigned int>, long unsigned int>::iterator i;
     std::stringstream ss;
     ss << destination << "statistic_measures.txt";
 
@@ -337,7 +338,7 @@ void GD::DiscoverMotifs(std::vector<std::map<std::vector<long unsigned int>, lon
         double Zscore = 0.0;
         double Pvalue = 0.0;
         for(int index=1; index<FVector.size(); index++) {
-            std::map<std::vector<long unsigned int>, long unsigned int>::iterator j = FVector[index].find(i->first);
+            std::map<std::multiset<long unsigned int>, long unsigned int>::iterator j = FVector[index].find(i->first);
             if(j!=FVector[index].end()) {
                 if(j->second > i->second) Pvalue++;
                 MeanFrequency += j->second;
@@ -345,7 +346,7 @@ void GD::DiscoverMotifs(std::vector<std::map<std::vector<long unsigned int>, lon
         }
         MeanFrequency /= FVector.size()-1;
         for(long unsigned int index=1; index<FVector.size(); index++) {
-            std::map<std::vector<long unsigned int>, long unsigned int>::iterator j = FVector[index].find(i->first);
+            std::map<std::multiset<long unsigned int>, long unsigned int>::iterator j = FVector[index].find(i->first);
             if(j!=FVector[index].end()) StandardDeviation += (MeanFrequency-j->second)*(MeanFrequency-j->second);
         }
         StandardDeviation /= FVector.size()-1;
@@ -451,7 +452,7 @@ void GD::DiscoverMotifs(std::vector<std::map<std::vector<long unsigned int>, lon
     #endif
 }
 
-TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::vector<long unsigned int>> &Motifs, GD::GraphList *kSubgraphs, GD::MetaObject *metaObj)
+TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::multiset<long unsigned int>> &Motifs, GD::GraphList *kSubgraphs, GD::MetaObject *metaObj)
 {
     #ifdef DEBUG
         if(DEBUG_LEVEL>=1) {
@@ -550,7 +551,7 @@ TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::vector<long unsigned int>
     return H;
 }
 
-void GD::ExportGDF(TNGraph &G, std::vector<std::vector<long unsigned int>> *Motifs, std::vector<long unsigned int> *IDs,
+void GD::ExportGDF(TNGraph &G, std::vector<std::multiset<long unsigned int>> *Motifs, std::vector<long unsigned int> *IDs,
                     GD::GraphList *kSubgraphs, std::string destination, GD::MetaObject *metaObj)
 {
     int size;
@@ -678,7 +679,7 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::vector<long unsigned int>> *Moti
     printf("metaObj->G nodes: %d\n", metaObj->G->GetNodes());
 }
 
-void GD::PrintMotifs(TNGraph &G, std::vector<std::vector<long unsigned int>> &Motifs, std::vector<long unsigned int> &IDs,
+void GD::PrintMotifs(TNGraph &G, std::vector<std::multiset<long unsigned int>> &Motifs, std::vector<long unsigned int> &IDs,
                      GD::GraphList *kSubgraphs, std::string destination, GD::MetaObject *metaObj)
 {
     for(int m=0; m<Motifs.size(); m++) {
