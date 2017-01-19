@@ -17,8 +17,8 @@ struct KavoshData;
 void Kavosh(std::string, std::string, int, int, int, int t);
 KavoshData Kavosh(PNGraph &, std::string, int, int, int, GD::MetaObject &, int t);
 void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomic_int> counter, int num_null_models,
-                           std::shared_ptr<std::vector<std::map<std::multiset<
-                                   long unsigned int>, long unsigned int>>> FVector, optionblk options, int m, set *dnwork);
+                           std::shared_ptr<std::vector<std::map<std::multiset<unsigned long>, int>>> FVector,
+                           optionblk options, int m, set *dnwork);
 
 int main(int argc, char* argv[]) {
 
@@ -186,11 +186,11 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
     //char const* file_path = source.c_str();
 
     GD::GraphList* kSubgraphs = new GD::GraphList;
-    std::vector<long unsigned int> IDs;
-    std::vector<std::multiset<long unsigned int>> Motifs;
-    //std::vector<std::map<std::vector<long unsigned int>, long unsigned int>> FVector(num_null_models+1);
-    std::shared_ptr<std::vector<std::map<std::multiset<long unsigned int>, long unsigned int>>> FVectorPtr
-            (new std::vector<std::map<std::multiset<long unsigned int>, long unsigned int>>(num_null_models+1));
+    std::vector<unsigned long> IDs;
+    std::vector<std::multiset<unsigned long>> Motifs;
+    //std::vector<std::map<std::vector<unsigned long>, unsigned long>> FVector(num_null_models+1);
+    std::shared_ptr<std::vector<std::map<std::multiset<unsigned long>, int>>> FVectorPtr
+            (new std::vector<std::map<std::multiset<unsigned long>, int>>(num_null_models+1));
     std::vector<std::thread> threads;
     std::shared_ptr<std::atomic_int> shared_counter (new std::atomic_int (0));
     int m = SETWORDSNEEDED(motif_size);
@@ -204,9 +204,7 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
 
     #ifdef DEBUG
         printf("\n::::::::::ENUMERATION AND CLASSIFICATION ON ORIGNIAL GRAPH:::::::::::\n");
-    #endif
 
-    #ifdef DEBUG
         if(DEBUG_LEVEL>=1)
             printf("Starting enumeration...\n");
     #endif
@@ -223,15 +221,11 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
             printf("Classification done!\nGetting frequencies...\n");
     #endif
     uint64 t2 = GetTimeMs64();
-    GD::GetFrequencies(kSubgraphs, FVectorPtr->at(shared_counter->fetch_add(1)));
+    GD::GetFrequencies(kSubgraphs, FVectorPtr->at((size_t) shared_counter->fetch_add(1)));
     uint64 t3 = GetTimeMs64();
     #ifdef DEBUG
         if(DEBUG_LEVEL>=1)
-            printf("Frequencies obtained!\n");
-    #endif
-
-    #ifdef DEBUG
-        if(DEBUG_LEVEL>=1) printf("\nEnumeration: %lu ms\nClassification: %lu ms\nGetting Frequencies: %lu ms\n", t1-t0, t2-t1, t3-t2);
+            printf("Frequencies obtained!\n\nEnumeration: %lu ms\nClassification: %lu ms\nGetting Frequencies: %lu ms\n", t1-t0, t2-t1, t3-t2);
         printf("\n::::::::::ENUMERATION AND CLASSIFICATION ON RANDOM GRAPHS::::::::::::\n");
     #endif
     enum_time += t1-t0;
@@ -242,10 +236,6 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
                 std::thread(proccessRandomNetwork, G, motif_size, shared_counter, num_null_models, FVectorPtr, options, m, dnwork));
 
     for(auto& th : threads) th.join();
-
-    /*if(motif_size==3) {
-        GD::PrintThat(kSubgraphs);
-    }*/
 
     uint64 t10 = GetTimeMs64();
     GD::DiscoverMotifs(*FVectorPtr, Motifs, IDs, motif_size, destination, *G, kSubgraphs);
@@ -271,7 +261,7 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
 
 void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomic_int> counter, int num_null_models,
                            std::shared_ptr<std::vector<std::map<std::multiset
-                                   <long unsigned int>, long unsigned int>>> FVector, optionblk options, int m, set *dnwork)
+                                   <unsigned long>, int>>> FVector, optionblk options, int m, set *dnwork)
 {
     uint64 t3 = GetTimeMs64();
     for(int pos = counter->fetch_add(1); pos <= num_null_models; pos = counter->fetch_add(1)) {
@@ -279,30 +269,31 @@ void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomi
             std::cerr << pos << std::endl;
 
         GD::GraphList *kRSubgraphs = new GD::GraphList;
-        uint64 t4 = GetTimeMs64();
         #ifdef DEBUG
                 if(DEBUG_LEVEL>=2)
                             printf("Starting randomization...\n");
         #endif
+        uint64 t4 = GetTimeMs64();
         TNGraph *R = GD::Randomize(*G);
-        #ifdef DEBUG
-                if(DEBUG_LEVEL>=2)
-                            printf("Randomization done!\n");
-        #endif
         uint64 t5 = GetTimeMs64();
         #ifdef DEBUG
-                if(DEBUG_LEVEL>=1 || DEBUG_LEVEL==-1) printf("\n------\nRandomization: %lu ms\n", t5-t4);
-                        if(DEBUG_LEVEL>=3) {
-                            printf("\nNew random graph edges: ");
-                            long unsigned int j=0;
-                            while(R->IsNode(j)) {
-                                for(long unsigned int e=0; e<(R->GetNI(j)).GetOutDeg(); e++) {
-                                    printf("%lu-%d ", j, (R->GetNI(j)).GetOutNId(e));
-                                }
-                                j++;
-                            }
-                            printf("\n");
-                        }
+            if(DEBUG_LEVEL>=2)
+                printf("Randomization done!\n");
+
+            if(DEBUG_LEVEL>=1 || DEBUG_LEVEL==-1)
+                printf("\n------\nRandomization: %lu ms\n", t5-t4);
+
+            if(DEBUG_LEVEL>=3) {
+                printf("\nNew random graph edges: ");
+                unsigned long j=0;
+                while(R->IsNode(j)) {
+                    for(unsigned long e=0; e<(R->GetNI(j)).GetOutDeg(); e++) {
+                        printf("%lu-%d ", j, (R->GetNI(j)).GetOutNId(e));
+                    }
+                    j++;
+                }
+                printf("\n");
+            }
         #endif
         uint64 t6 = GetTimeMs64();
         GD::Enumerate(*R, motif_size, kRSubgraphs);

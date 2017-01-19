@@ -35,46 +35,41 @@ namespace GD {
         MetaObject(PNGraph &);
         ~MetaObject();
         TNGraph *G;
-        std::map<long unsigned int, std::vector<long unsigned int>*> *metaMap;
+        std::map<int, std::vector<int>*> *metaMap;
     };
 
-    void PrintThat(GD::GraphList*);
+    void Enumerate(TNGraph&, unsigned long, GD::GraphList*);
 
-    void Enumerate(TNGraph&, long unsigned int, GD::GraphList*);
+    void Explore(TNGraph&, std::vector<std::vector<int>>&, int, std::vector<bool>&,
+                    std::vector<int>&, std::vector<int>&, GD::GraphList*,
+                 unsigned long);
 
-    void Explore(TNGraph&, std::vector<std::vector<long unsigned int>>&, long unsigned int, std::vector<bool>&,
-                    std::vector<long unsigned int>&, std::vector<long unsigned int>&, GD::GraphList*,
-                 long unsigned int);
+    void mapNeighbors(TNGraph&, std::vector<std::vector<int>>&);
 
-    void mapNeighbors(TNGraph&, std::vector<std::vector<long unsigned int>>&);
+    void Validate(std::vector<std::vector<int>>&, std::vector<bool>&, std::vector<int>&,
+                    int, std::vector<int>&);
 
-    void Validate(std::vector<std::vector<long unsigned int>>&, std::vector<bool>&, std::vector<long unsigned int>&,
-                    long unsigned int, std::vector<long unsigned int>&);
+    std::vector<int> genComb(unsigned long, std::vector<int>, std::vector<int> &, unsigned long level);
 
-    std::vector<long unsigned int> genComb(long unsigned int, std::vector<long unsigned int>, long unsigned int,
-                    std::vector<long unsigned int>&, long unsigned int level = 0);
+    void updateIndex(std::vector<int>&, unsigned long);
 
-    void updateIndex(std::vector<long unsigned int>&, long unsigned int);
-
-    void Classify(TNGraph&, GD::GraphList*, long unsigned int, optionblk&, int, set*);
+    void Classify(TNGraph&, GD::GraphList*, int, optionblk&, int, set*);
 
     TNGraph* Randomize(TNGraph&);
 
-    void GetFrequencies(GD::GraphList*, std::map<std::multiset<long unsigned int>, long unsigned int>&);
+    void GetFrequencies(GD::GraphList*, std::map<std::multiset<unsigned long>, int>&);
 
-    void DiscoverMotifs(std::vector<std::map<std::multiset<long unsigned int>, long unsigned int>>&,
-                        std::vector<std::multiset<long unsigned int>>&, std::vector<long unsigned int>&,
-                        long unsigned int, std::string, TNGraph&, GD::GraphList*);
+    void DiscoverMotifs(std::vector<std::map<std::multiset<unsigned long>, int>>&,
+                        std::vector<std::multiset<unsigned long>>&, std::vector<unsigned long>&,
+                        int, std::string, TNGraph&, GD::GraphList*);
 
-    TNGraph* ConcatMotifs(TNGraph&, std::vector<std::multiset<long unsigned int>>&, GD::GraphList*, GD::MetaObject*);
+    TNGraph* ConcatMotifs(TNGraph&, std::vector<std::multiset<unsigned long>>&, GD::GraphList*, GD::MetaObject*);
 
-    void ExportGDF(TNGraph&, std::vector<std::multiset<long unsigned int>>*, std::vector<long unsigned int>*,
+    void ExportGDF(TNGraph&, std::vector<std::multiset<unsigned long>>*, std::vector<unsigned long>*,
                     GD::GraphList*, std::string, GD::MetaObject*);
 
-    void PrintMotifs(TNGraph&, std::vector<std::multiset<long unsigned int>>&, std::vector<long unsigned int>&,
+    void PrintMotifs(TNGraph&, std::vector<std::multiset<unsigned long>>&, std::vector<unsigned long>&,
                     GD::GraphList*, std::string, GD::MetaObject*);
-
-    void SaveResults(TNGraph&, std::vector<std::vector<long unsigned int>>&, GD::GraphList*);
 
 }
 

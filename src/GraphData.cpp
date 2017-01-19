@@ -5,11 +5,10 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
-#include <bits/stl_set.h>
 
 struct GD::Cell {
-    std::vector<long unsigned int> vertices;
-    std::multiset<long unsigned int> label;
+    std::vector<int> vertices;
+    std::multiset<unsigned long> label;
     Cell* next = NULL;
 };
 
@@ -35,9 +34,9 @@ void GD::GraphList::AddGraph() {
 
 GD::MetaObject::MetaObject(PNGraph &G) {
     this->G = &*G;
-    metaMap = new std::map<long unsigned int, std::vector<long unsigned int>*>;
+    metaMap = new std::map<int, std::vector<int>*>;
     for (TNGraph::TNodeI NI = this->G->BegNI(); NI < this->G->EndNI(); NI++) {
-        std::vector<long unsigned int> *v = new std::vector<long unsigned int>;
+        std::vector<int> *v = new std::vector<int>;
         v->push_back(NI.GetId());
         metaMap->emplace(NI.GetId(),v);
     }
@@ -57,35 +56,26 @@ GD::MetaObject::MetaObject(GD::MetaObject &metaObj) {
     int COUNTER = 0;
 #endif
 
-void GD::PrintThat(GD::GraphList *kSubgraphs) {
-    printf("PRINTING THAT\n");
-    kSubgraphs->cursor = kSubgraphs->ini->next;
-    while(kSubgraphs->cursor) {
-        printf("%lu %lu %lu\n", kSubgraphs->cursor->vertices.at(0), kSubgraphs->cursor->vertices.at(1), kSubgraphs->cursor->vertices.at(2));
-        kSubgraphs->cursor = kSubgraphs->cursor->next;
-    }
-}
-
-void GD::Enumerate(TNGraph &G, long unsigned int k, GD::GraphList *kSubgraphs) {
+void GD::Enumerate(TNGraph &G, unsigned long k, GD::GraphList *kSubgraphs) {
     uint64 t0 = GetTimeMs64();
-    std::vector<std::vector<long unsigned int>> Neighbors(G.GetMxNId());
+    std::vector<std::vector<int>> Neighbors((size_t) G.GetMxNId());
     uint64 t1 = GetTimeMs64();
     GD::mapNeighbors(G, Neighbors);                                                // map neighbors for all vertices to avoid repeatly discovering the neighborhood of a vertex
     uint64 t2 = GetTimeMs64();
     #ifdef DEBUG
         if(DEBUG_LEVEL>=1 || DEBUG_LEVEL==-1) printf("GetNodes: %lu ms\nMap Neighbors: %lu ms\n", t1-t0, t2-t1);
     #endif
-    //for(long unsigned int i=0; G.IsNode(i); i++) {                                 // iterate through all vertices of G
+    //for(unsigned long i=0; G.IsNode(i); i++) {                                 // iterate through all vertices of G
     for (TNGraph::TNodeI NI = G.BegNI(); NI < G.EndNI(); NI++) {
         int i = NI.GetId();
         #ifdef DEBUG
             if(DEBUG_LEVEL>=2) printf("Root: %d\n", i);
         #endif
-        std::vector<bool> Visited(G.GetMxNId());                                 // list to keep track of visited vertices
+        std::vector<bool> Visited((size_t) G.GetMxNId());                                 // list to keep track of visited vertices
         Visited[i] = true;                                                         // mark the current root as visited
-        std::vector<long unsigned int> S(1);                                    // vertices selected in current level
+        std::vector<int> S(1);                                    // vertices selected in current level
         S[0] = i;                                                                // only the root is selected in the first level
-        std::vector<long unsigned int> subgraph(S);                                // vector to store the vertices of the subgraph
+        std::vector<int> subgraph(S);                                // vector to store the vertices of the subgraph
         GD::Explore(G, Neighbors, i, Visited, S, subgraph, kSubgraphs, k-1);    // Explore all possible combinations that generete different trees
         Visited[i] = false;                                                        // unmark current root as visited at the end
     }
@@ -99,9 +89,9 @@ void GD::Enumerate(TNGraph &G, long unsigned int k, GD::GraphList *kSubgraphs) {
     #endif
 }
 
-void GD::Explore(TNGraph &G, std::vector<std::vector<long unsigned int>> &Neighbors, long unsigned int root,
-    std::vector<bool> &Visited, std::vector<long unsigned int> &S, std::vector<long unsigned int> &subgraph,
-    GD::GraphList *kSubgraphs, long unsigned int Remainder) {
+void GD::Explore(TNGraph &G, std::vector<std::vector<int>> &Neighbors, int root,
+    std::vector<bool> &Visited, std::vector<int> &S, std::vector<int> &subgraph,
+    GD::GraphList *kSubgraphs, unsigned long Remainder) {
     #ifdef DEBUG
         LEVEL++;
     #endif
@@ -121,28 +111,28 @@ void GD::Explore(TNGraph &G, std::vector<std::vector<long unsigned int>> &Neighb
         #endif
         return;
     }
-    std::vector<long unsigned int> ValList;                            // create a vector to store valid children at this level of the tree
+    std::vector<int> ValList;                            // create a vector to store valid children at this level of the tree
     GD::Validate(Neighbors, Visited, S, root, ValList);                // fill the vector with the actual children
     uint64 t1 = GetTimeMs64();
-    long unsigned int n = std::min((long unsigned int) ValList.size(), Remainder); // get the number of vertices to select at this level
+    unsigned long n = std::min(ValList.size(), Remainder); // get the number of vertices to select at this level
     #ifdef DEBUG
         if(DEBUG_LEVEL>=4 || DEBUG_LEVEL==-1) printf("\tExplore > Validade: %lu ms\n", t1-t0);
         if(DEBUG_LEVEL>=2) {
-            for(long unsigned int p=0; p<LEVEL; p++) printf("\t");
+            for(unsigned long p=0; p<LEVEL; p++) printf("\t");
             printf("Valid Children: ");
-            for(long unsigned int p=0; p<ValList.size(); p++) printf("%lu ", ValList[p]);
+            for(unsigned long p=0; p<ValList.size(); p++) printf("%lu ", ValList[p]);
             printf("\n");
         }
     #endif
-    for(long unsigned int i=1; i<=n; i++) {                                            // iterate from selecting a single vertex to selecting n vertices
-        std::vector<long unsigned int> Index(ValList.size()-i, 0);                    // create a vector to keep track of which vertices to delete from ValList in order to generate a combination
-        std::vector<long unsigned int> C = GD::genComb(i, ValList, n, Index);        // generate the initial combination
+    for(unsigned long i=1; i<=n; i++) {                                            // iterate from selecting a single vertex to selecting n vertices
+        std::vector<int> Index(ValList.size()-i, 0);                    // create a vector to keep track of which vertices to delete from ValList in order to generate a combination
+        std::vector<int> C = GD::genComb(i, ValList, Index, 0);        // generate the initial combination
         do {                                                                                                    // repeat
             #ifdef DEBUG
                 if(DEBUG_LEVEL>=2) {
-                    for(long unsigned int p=0; p<LEVEL; p++) printf("\t");
+                    for(unsigned long p=0; p<LEVEL; p++) printf("\t");
                     printf("Selection: ");
-                    for(long unsigned int p=0; p<C.size(); p++) printf("%lu ", C[p]);
+                    for(unsigned long p=0; p<C.size(); p++) printf("%lu ", C[p]);
                     printf("\n");
                 }
             #endif
@@ -150,7 +140,7 @@ void GD::Explore(TNGraph &G, std::vector<std::vector<long unsigned int>> &Neighb
             GD::Explore(G, Neighbors, root, Visited, C, subgraph, kSubgraphs, Remainder-i);                        // recursive call to advance to next level of the implicit tree
             uint64 t2 = GetTimeMs64();
             GD::updateIndex(Index, i);                                                                            // update Index to generate the next combination
-            C = GD::genComb(i, ValList, n, Index);                                                                // generate next combination
+            C = GD::genComb(i, ValList, Index, 0);                                                                // generate next combination
             uint64 t3 = GetTimeMs64();
             #ifdef DEBUG
                 if(DEBUG_LEVEL>=4 || DEBUG_LEVEL==-1) printf("Get next combination time: %lu ms\n", t3-t2);
@@ -158,13 +148,13 @@ void GD::Explore(TNGraph &G, std::vector<std::vector<long unsigned int>> &Neighb
             subgraph.erase(subgraph.end() - C.size(), subgraph.end());                                            // clear old combination from the subgraph "constructor"
         } while(!Index.empty() && Index.back()!=0);
     }
-    for(long unsigned int i=0; i<ValList.size(); i++) Visited.at(ValList[i]) = false;    // unmark selected vertices at current level
+    for(size_t i=0; i<ValList.size(); i++) Visited.at((size_t) ValList[i]) = false;    // unmark selected vertices at current level
     #ifdef DEBUG
         LEVEL--;
     #endif
 }
 
-void GD::mapNeighbors(TNGraph &G, std::vector<std::vector<long unsigned int>> &Neighbors) {
+void GD::mapNeighbors(TNGraph &G, std::vector<std::vector<int>> &Neighbors) {
     #ifdef DEBUG
         if(DEBUG_LEVEL>=2) printf("Mapping neighborhood...\n");
     #endif
@@ -172,8 +162,8 @@ void GD::mapNeighbors(TNGraph &G, std::vector<std::vector<long unsigned int>> &N
         for (TNGraph::TNodeI NI2 = G.BegNI(); NI2 < G.EndNI(); NI2++)
             if(NI1.IsNbrNId(NI2.GetId()))
                 Neighbors[NI1.GetId()].push_back(NI2.GetId());
-    /*for(long unsigned int i=0; i<G.GetNodes(); i++)
-        for(long unsigned int j=0; j<G.GetNodes(); j++)
+    /*for(unsigned long i=0; i<G.GetNodes(); i++)
+        for(unsigned long j=0; j<G.GetNodes(); j++)
             if((G.GetNI(i)).IsNbrNId(j))
                 Neighbors[i].push_back(j);*/
     #ifdef DEBUG
@@ -181,9 +171,9 @@ void GD::mapNeighbors(TNGraph &G, std::vector<std::vector<long unsigned int>> &N
     #endif
 }
 
-void GD::Validate(std::vector<std::vector<long unsigned int>>& Neighbors, std::vector<bool> &Visited, std::vector<long unsigned int> &S, long unsigned int root, std::vector<long unsigned int> &ValList) {
-    for(long unsigned int i=0; i<S.size(); i++) {                            // S is the selected children of the last level (or root)
-        for(long unsigned int j=0; j<Neighbors[S[i]].size(); j++) {            // j is the label of possible children, which can't be greater than root
+void GD::Validate(std::vector<std::vector<int>>& Neighbors, std::vector<bool> &Visited, std::vector<int> &S, int root, std::vector<int> &ValList) {
+    for(unsigned long i=0; i<S.size(); i++) {                            // S is the selected children of the last level (or root)
+        for(unsigned long j=0; j<Neighbors[S[i]].size(); j++) {            // j is the label of possible children, which can't be greater than root
             if(Neighbors[S[i]][j]>root && !Visited[Neighbors[S[i]][j]]) {    // if not visited and it's in the neighborhood of S[i]
                 Visited[Neighbors[S[i]][j]] = true;                            // mark as visited
                 ValList.push_back(Neighbors[S[i]][j]);                        // include as valid children
@@ -192,16 +182,16 @@ void GD::Validate(std::vector<std::vector<long unsigned int>>& Neighbors, std::v
     }
 }
 
-std::vector<long unsigned int> GD::genComb(long unsigned int i, std::vector<long unsigned int> ValList, long unsigned int n, std::vector<long unsigned int> &Index, long unsigned int level) {
+std::vector<int> GD::genComb(unsigned long i, std::vector<int> ValList, std::vector<int> &Index, unsigned long level) {
     if(!Index.empty())
         while(ValList.size()!=i)
             ValList.erase(ValList.begin() + Index[level++]);
     return ValList;
 }
 
-void GD::updateIndex(std::vector<long unsigned int> &Index, long unsigned int n) {
+void GD::updateIndex(std::vector<int> &Index, unsigned long n) {
     if(Index.empty()) return;                    // nothing to update if Index is empty
-    long unsigned int i = Index.size() - 1;        // go to last position of Index
+    unsigned long i = Index.size() - 1;        // go to last position of Index
     Index[i]++;                                    // increase it
     for(i; i>0; i--) {                            // ascend Index
         if(Index[i]>n) Index[i-1]++;            // if the current position's value overpasses n "send one" to the position before
@@ -213,7 +203,7 @@ void GD::updateIndex(std::vector<long unsigned int> &Index, long unsigned int n)
             Index[i] = Index[i-1];
 }
 
-void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n, optionblk &options, int m, set *dnwork) {
+void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, int n, optionblk &options, int m, set *dnwork) {
     kSubgraphs->cursor = kSubgraphs->ini->next;
 
 
@@ -224,7 +214,6 @@ void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n, op
     DYNALLSTAT(int,orbits,orbits_sz);
 
     statsblk stats;
-    set *gv;
 
     DYNALLOC2(graph,g,g_sz,m,n,"malloc");
     DYNALLOC2(graph,canon,canon_sz,m,n,"malloc");
@@ -234,10 +223,10 @@ void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n, op
 
     while(kSubgraphs->cursor) {
         EMPTYGRAPH(g,m,n);
-        for(long unsigned int i=0; i<n; i++) {
-            long unsigned int a = kSubgraphs->cursor->vertices.at(i);
-            for(long unsigned int j=0; j<n; j++) {
-                long unsigned int b = kSubgraphs->cursor->vertices.at(j);
+        for(int i=0; i<n; i++) {
+            int a = kSubgraphs->cursor->vertices.at((size_t) i);
+            for(int j=0; j<n; j++) {
+                int b = kSubgraphs->cursor->vertices.at((size_t) j);
                 if(G.GetNI(a).IsOutNId(b)) {
                     ADDONEARC(g,i,j,m);
                 }
@@ -246,15 +235,15 @@ void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n, op
 
         //densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canon);
         nauty(g,lab,ptn,NULL,orbits,&options,&stats,dnwork,2*60*m,m,n,canon);
-        for(long unsigned int i=0; i<m*n; i++)
+        for(int i=0; i<m*n; i++)
             kSubgraphs->cursor->label.insert(canon[i]);
         #ifdef DEBUG
             if(DEBUG_LEVEL>=3) {
-                for(long unsigned int i=0; i<kSubgraphs->cursor->label.size(); i++) {
+                for(unsigned long i=0; i<kSubgraphs->cursor->label.size(); i++) {
                     printf("%lu ", kSubgraphs->cursor->label.at(i));
                 }
                 printf("= ");
-                for(long unsigned int i=0; i<n; i++) {
+                for(unsigned long i=0; i<n; i++) {
                     printf("%lu ", kSubgraphs->cursor->vertices.at(i));
                 }
                 printf("\n");
@@ -277,9 +266,9 @@ void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, long unsigned int n, op
 TNGraph* GD::Randomize(TNGraph &G) {
     TNGraph *R = new TNGraph(G);
     TNGraph::TNodeI a, b, c, d;
-    for(long unsigned int i=0; i<3; i++) {
+    for(int i=0; i<3; i++) {
         for (a = R->BegNI(); a < R->EndNI(); a++) {
-        //for(long unsigned int j=0; j<R->GetNodes(); j++) {
+        //for(unsigned long j=0; j<R->GetNodes(); j++) {
             //a = R->GetNI(j);
             if(a.GetOutDeg()==0) continue;
             do {
@@ -299,28 +288,29 @@ TNGraph* GD::Randomize(TNGraph &G) {
     return R;
 }
 
-void GD::GetFrequencies(GD::GraphList* kSubgraphs, std::map<std::multiset<long unsigned int>, long unsigned int> &Frequencies) {
+void GD::GetFrequencies(GD::GraphList* kSubgraphs, std::map<std::multiset<unsigned long>, int> &Frequencies) {
     kSubgraphs->cursor = kSubgraphs->ini->next;
     while(kSubgraphs->cursor) {
         Frequencies[kSubgraphs->cursor->label]++;
         kSubgraphs->cursor = kSubgraphs->cursor->next;
     }
-    std::map<std::multiset<long unsigned int>, long unsigned int>::iterator it;
+
     #ifdef DEBUG
         if(DEBUG_LEVEL>=3)
+            std::map<std::multiset<unsigned long>, int>::iterator it;
             for(it = Frequencies.begin(); it != Frequencies.end(); it++) {
-                for(long unsigned int i=0; i<it->first.size(); i++)
+                for(unsigned long i=0; i<it->first.size(); i++)
                     printf("%lu ", (it->first).at(i));
                 printf(": %lu\n", it->second);
             }
     #endif
 }
 
-void GD::DiscoverMotifs(std::vector<std::map<std::multiset<long unsigned int>, long unsigned int>> &FVector,
-                        std::vector<std::multiset<long unsigned int>> &Motifs, std::vector<long unsigned int> &IDs,
-                        long unsigned int motif_size, std::string destination, TNGraph &G, GD::GraphList *kSubgraphs)
+void GD::DiscoverMotifs(std::vector<std::map<std::multiset<unsigned long>, int>> &FVector,
+                        std::vector<std::multiset<unsigned long>> &Motifs, std::vector<unsigned long> &IDs,
+                        int motif_size, std::string destination, TNGraph &G, GD::GraphList *kSubgraphs)
 {
-    std::map<std::multiset<long unsigned int>, long unsigned int>::iterator i;
+    std::map<std::multiset<unsigned long>, int>::iterator i;
     std::stringstream ss;
     ss << destination << "statistic_measures.txt";
 
@@ -335,18 +325,18 @@ void GD::DiscoverMotifs(std::vector<std::map<std::multiset<long unsigned int>, l
     for(i = FVector[0].begin(); i != FVector[0].end(); i++) {
         double MeanFrequency = 0.0;
         double StandardDeviation = 0.0;
-        double Zscore = 0.0;
+        double Zscore;
         double Pvalue = 0.0;
         for(int index=1; index<FVector.size(); index++) {
-            std::map<std::multiset<long unsigned int>, long unsigned int>::iterator j = FVector[index].find(i->first);
+            std::map<std::multiset<unsigned long>, int>::iterator j = FVector[index].find(i->first);
             if(j!=FVector[index].end()) {
                 if(j->second > i->second) Pvalue++;
                 MeanFrequency += j->second;
             }
         }
         MeanFrequency /= FVector.size()-1;
-        for(long unsigned int index=1; index<FVector.size(); index++) {
-            std::map<std::multiset<long unsigned int>, long unsigned int>::iterator j = FVector[index].find(i->first);
+        for(size_t index=1; index<FVector.size(); index++) {
+            std::map<std::multiset<unsigned long>, int>::iterator j = FVector[index].find(i->first);
             if(j!=FVector[index].end()) StandardDeviation += (MeanFrequency-j->second)*(MeanFrequency-j->second);
         }
         StandardDeviation /= FVector.size()-1;
@@ -354,7 +344,7 @@ void GD::DiscoverMotifs(std::vector<std::map<std::multiset<long unsigned int>, l
         Zscore = (i->second - MeanFrequency)/StandardDeviation;
         Pvalue /= FVector.size()-1;
 
-        std::vector<long unsigned int> *vertices;
+        std::vector<int> *vertices = nullptr;
         kSubgraphs->cursor = kSubgraphs->ini->next;
         while(kSubgraphs->cursor) {
             if(kSubgraphs->cursor->label==i->first) {
@@ -364,14 +354,17 @@ void GD::DiscoverMotifs(std::vector<std::map<std::multiset<long unsigned int>, l
             kSubgraphs->cursor = kSubgraphs->cursor->next;
         }
 
-        long unsigned int ID = 0;
-        long unsigned int maxpow = motif_size*motif_size - 1;
+        if (vertices == nullptr)
+            return;
+
+        unsigned long ID = 0;
+        unsigned long maxpow = (unsigned long) motif_size * (unsigned long) motif_size - 1;
         bool adjMatrix[motif_size][motif_size];
 
         for(int j=0; j<motif_size; j++) {
             for(int k=0; k<motif_size; k++) {
                 adjMatrix[j][k] = false;
-                if(G.GetNI(vertices->at(motif_size-1-j)).IsOutNId(vertices->at(motif_size-1-k))) {
+                if(G.GetNI(vertices->at((size_t) motif_size-1-j)).IsOutNId(vertices->at((size_t) motif_size-1-k))) {
                     adjMatrix[j][k] = true;
                     ID += (long) (pow(2, (maxpow - (j*motif_size+k))));
                 }
@@ -430,7 +423,7 @@ void GD::DiscoverMotifs(std::vector<std::map<std::multiset<long unsigned int>, l
 
         #ifdef DEBUG
             if(DEBUG_LEVEL>=0) {
-                for(long unsigned int j=0; j<i->first.size(); j++) {
+                for(unsigned long j=0; j<i->first.size(); j++) {
                     printf("%lu ", i->first.at(j));
                 }
                 printf(": Original Frequency = %lu : Mean Frequency = %f : Standard Deviation = %f : Zscore = %f : Pvalue = %f\n", i->second, MeanFrequency, StandardDeviation, Zscore, Pvalue);
@@ -452,7 +445,7 @@ void GD::DiscoverMotifs(std::vector<std::map<std::multiset<long unsigned int>, l
     #endif
 }
 
-TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::multiset<long unsigned int>> &Motifs, GD::GraphList *kSubgraphs, GD::MetaObject *metaObj)
+TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::multiset<unsigned long>> &Motifs, GD::GraphList *kSubgraphs, GD::MetaObject *metaObj)
 {
     #ifdef DEBUG
         if(DEBUG_LEVEL>=1) {
@@ -460,18 +453,18 @@ TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::multiset<long unsigned in
         }
     #endif
 
-    std::map<long unsigned int, std::vector<long unsigned int>*> *metaMap = new std::map<long unsigned int, std::vector<long unsigned int>*>;
+    std::map<int, std::vector<int>*> *metaMap = new std::map<int, std::vector<int>*>;
 
     TNGraph *H = new TNGraph(G);
     for(int m=0; m<Motifs.size(); m++) {
         kSubgraphs->cursor = kSubgraphs->ini->next;
         while(kSubgraphs->cursor) {
             if(kSubgraphs->cursor->label==Motifs[m]) {
-                long unsigned int mNodeId = H->AddNode(-1);
-                std::vector<long unsigned int> *aux = new std::vector<long unsigned int>;
+                int mNodeId = H->AddNode(-1);
+                std::vector<int> *aux = new std::vector<int>;
                 for(int i=0; i<Motifs[m].size(); i++) {
-                    std::vector<long unsigned int> *tmp;
-                    tmp = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second;
+                    std::vector<int> *tmp;
+                    tmp = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at((size_t) i))->second;
                     aux->insert(aux->end(), tmp->begin(), tmp->end());
                 }
                 metaMap->emplace(mNodeId, aux);
@@ -485,7 +478,7 @@ TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::multiset<long unsigned in
                     }
                 #endif
                 for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
-                    TNGraph::TNodeI u = H->GetNI(kSubgraphs->cursor->vertices.at(i));
+                    TNGraph::TNodeI u = H->GetNI(kSubgraphs->cursor->vertices.at((size_t) i));
                     for(int j=0; j<u.GetOutDeg(); j++)
                         if(mNodeId != u.GetOutNId(j))
                             H->AddEdge(mNodeId, u.GetOutNId(j));
@@ -526,8 +519,8 @@ TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::multiset<long unsigned in
         while(kSubgraphs->cursor) {
             if(kSubgraphs->cursor->label==Motifs[m]) {
                 for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
-                    if(H->IsNode(kSubgraphs->cursor->vertices.at(i))) {
-                        H->DelNode(kSubgraphs->cursor->vertices.at(i));
+                    if(H->IsNode(kSubgraphs->cursor->vertices.at((size_t) i))) {
+                        H->DelNode(kSubgraphs->cursor->vertices.at((size_t) i));
                         #ifdef DEBUG
                             if(DEBUG_LEVEL>=2) {
                                 printf("Node %lu removed\n", kSubgraphs->cursor->vertices.at(i));
@@ -551,12 +544,12 @@ TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::multiset<long unsigned in
     return H;
 }
 
-void GD::ExportGDF(TNGraph &G, std::vector<std::multiset<long unsigned int>> *Motifs, std::vector<long unsigned int> *IDs,
+void GD::ExportGDF(TNGraph &G, std::vector<std::multiset<unsigned long>> *Motifs, std::vector<unsigned long> *IDs,
                     GD::GraphList *kSubgraphs, std::string destination, GD::MetaObject *metaObj)
 {
     int size;
     if(Motifs!=NULL) {
-        size = Motifs->size();
+        size = (int) Motifs->size();
     } else {
         size = 1;
     }
@@ -573,14 +566,14 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::multiset<long unsigned int>> *Mo
         }
     #endif
     for(int m=0; m<size; m++) {
-        std::vector<bool> marker(metaObj->G->GetNodes(), false);    // vector to mark which nodes will be colored as being part of a motif
+        std::vector<bool> marker((size_t) metaObj->G->GetNodes(), false);    // vector to mark which nodes will be colored as being part of a motif
         if(Motifs!=NULL) {
             kSubgraphs->cursor = kSubgraphs->ini->next;
             while(kSubgraphs->cursor) {
-                if(kSubgraphs->cursor->label==Motifs->at(m)) {
+                if(kSubgraphs->cursor->label==Motifs->at((size_t) m)) {
                     for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
-                        std::vector<long unsigned int> *tmp = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second;
-                        for(std::vector<long unsigned int>::iterator it = tmp->begin(); it != tmp->end(); ++it)
+                        std::vector<int> *tmp = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at((size_t) i))->second;
+                        for(std::vector<int>::iterator it = tmp->begin(); it != tmp->end(); ++it)
                             marker[*it] = true;
                     }
                 }
@@ -589,7 +582,7 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::multiset<long unsigned int>> *Mo
         }
         std::stringstream ss;
         if(Motifs!=NULL)
-            ss << destination << "motif_ID" << IDs->at(m) << "_highlighted.gdf";
+            ss << destination << "motif_ID" << IDs->at((size_t) m) << "_highlighted.gdf";
         else
             ss << destination << "concatenated_motifs.gdf";
         std::string s = ss.str();
@@ -598,7 +591,7 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::multiset<long unsigned int>> *Mo
         GDF.open(path);
         GDF << "nodedef>name VARCHAR,color VARCHAR\n";
 
-        /*for(long unsigned int i=0; i<marker.size(); i++) {
+        /*for(unsigned long i=0; i<marker.size(); i++) {
             GDF << i << ",";
             if(marker[i]) GDF << "'255,0,0'\n";
             else GDF << "'0,0,0'\n";
@@ -621,16 +614,16 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::multiset<long unsigned int>> *Mo
             kSubgraphs->cursor = kSubgraphs->ini->next;
             while(kSubgraphs->cursor) {
                 //std::cerr << "\n";
-                if(kSubgraphs->cursor->label==Motifs->at(m)) {
+                if(kSubgraphs->cursor->label==Motifs->at((size_t) m)) {
                     for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
                         for(int j=0; j<kSubgraphs->cursor->vertices.size(); j++) {
                             //std::cerr << "···";
-                            if((G.GetNI(kSubgraphs->cursor->vertices.at(i))).IsOutNId(kSubgraphs->cursor->vertices.at(j))) {
-                                std::vector<long unsigned int> tmp(*(metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second));
-                                std::vector<long unsigned int> aux(*(metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(j))->second));
+                            if((G.GetNI(kSubgraphs->cursor->vertices.at((size_t) i))).IsOutNId(kSubgraphs->cursor->vertices.at((size_t) j))) {
+                                std::vector<int> tmp(*(metaObj->metaMap->find(kSubgraphs->cursor->vertices.at((size_t) i))->second));
+                                std::vector<int> aux(*(metaObj->metaMap->find(kSubgraphs->cursor->vertices.at((size_t) j))->second));
                                 aux.insert(aux.end(), tmp.begin(), tmp.end());
-                                for(std::vector<long unsigned int>::iterator it0 = aux.begin(); it0 != aux.end(); ++it0) {
-                                    for(std::vector<long unsigned int>::iterator it1 = aux.begin(); it1 != aux.end(); ++it1) {
+                                for(std::vector<int>::iterator it0 = aux.begin(); it0 != aux.end(); ++it0) {
+                                    for(std::vector<int>::iterator it1 = aux.begin(); it1 != aux.end(); ++it1) {
                                         if(*it0!=*it1 && T.GetNI(*it0).IsOutNId(*it1)) {
                                             GDF << *it0 << "," << *it1 << ",true,'255,0,0'\n";
                                             T.DelEdge(*it0, *it1);
@@ -655,11 +648,11 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::multiset<long unsigned int>> *Mo
         /*for(TNGraph::TEdgeI EI = T.BegEI(); EI < T.EndEI(); EI++) {
             if(EI.GetSrcNId()==EI.GetSrcNId()) continue;
             std::cerr << EI.GetSrcNId() << " -> " << EI.GetSrcNId() << "\n";
-            std::vector<long unsigned int> aux(*(metaObj->metaMap->find(EI.GetSrcNId())->second));
-            std::vector<long unsigned int> tmp(*(metaObj->metaMap->find(EI.GetDstNId())->second));
+            std::vector<unsigned long> aux(*(metaObj->metaMap->find(EI.GetSrcNId())->second));
+            std::vector<unsigned long> tmp(*(metaObj->metaMap->find(EI.GetDstNId())->second));
             aux.insert(aux.end(), tmp.begin(), tmp.end());
-            for(std::vector<long unsigned int>::iterator it0 = aux.begin(); it0 != aux.end(); ++it0) {
-                for(std::vector<long unsigned int>::iterator it1 = aux.begin(); it1 != aux.end(); ++it1) {
+            for(std::vector<unsigned long>::iterator it0 = aux.begin(); it0 != aux.end(); ++it0) {
+                for(std::vector<unsigned long>::iterator it1 = aux.begin(); it1 != aux.end(); ++it1) {
                     if(*it0!=*it1 && T.GetNI(*it0).IsOutNId(*it1)) {
                         GDF << *it0 << "," << *it1 << ",true,'0,0,0'\n";
                     }
@@ -679,30 +672,29 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::multiset<long unsigned int>> *Mo
     printf("metaObj->G nodes: %d\n", metaObj->G->GetNodes());
 }
 
-void GD::PrintMotifs(TNGraph &G, std::vector<std::multiset<long unsigned int>> &Motifs, std::vector<long unsigned int> &IDs,
+void GD::PrintMotifs(TNGraph &G, std::vector<std::multiset<unsigned long>> &Motifs, std::vector<unsigned long> &IDs,
                      GD::GraphList *kSubgraphs, std::string destination, GD::MetaObject *metaObj)
 {
     for(int m=0; m<Motifs.size(); m++) {
         PNGraph motif = TNGraph::New();
         kSubgraphs->cursor = kSubgraphs->ini->next;
-        unsigned int group = 0;
         while(kSubgraphs->cursor->label!=Motifs[m])
             kSubgraphs->cursor = kSubgraphs->cursor->next;
 
         for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
-            std::vector<long unsigned int> *aux = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second;
-            for(std::vector<long unsigned int>::iterator it = aux->begin(); it != aux->end(); ++it) {
+            std::vector<int> *aux = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at((size_t) i))->second;
+            for(std::vector<int>::iterator it = aux->begin(); it != aux->end(); ++it) {
                 if(motif->IsNode(*it)) continue;
                 motif->AddNode(*it);
             }
         }
         for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
             for(int j=0; j<kSubgraphs->cursor->vertices.size(); j++) {
-                std::vector<long unsigned int> aux(*(metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(i))->second));
-                std::vector<long unsigned int> tmp(*(metaObj->metaMap->find(kSubgraphs->cursor->vertices.at(j))->second));
+                std::vector<int> aux(*(metaObj->metaMap->find(kSubgraphs->cursor->vertices.at((size_t) i))->second));
+                std::vector<int> tmp(*(metaObj->metaMap->find(kSubgraphs->cursor->vertices.at((size_t) j))->second));
                 aux.insert(aux.end(), tmp.begin(), tmp.end());
-                for(std::vector<long unsigned int>::iterator it0 = aux.begin(); it0 != aux.end(); ++it0) {
-                    for(std::vector<long unsigned int>::iterator it1 = aux.begin(); it1 != aux.end(); ++it1) {
+                for(std::vector<int>::iterator it0 = aux.begin(); it0 != aux.end(); ++it0) {
+                    for(std::vector<int>::iterator it1 = aux.begin(); it1 != aux.end(); ++it1) {
                         if(*it0!=*it1 && metaObj->G->GetNI(*it0).IsOutNId(*it1)) {
                             motif->AddEdge(*it0,*it1);
                         }
@@ -716,62 +708,4 @@ void GD::PrintMotifs(TNGraph &G, std::vector<std::multiset<long unsigned int>> &
         const char* path = s.c_str();
         TSnap::DrawGViz<PNGraph>(motif, gvlDot, path, "", NULL);
     }
-}
-
-void GD::SaveResults(TNGraph &G, std::vector<std::vector<long unsigned int>> &Motifs, GD::GraphList *kSubgraphs) {
-    /*std::stringstream ss;
-    ss << "../results/kavosh_results.txt";
-    std::string s = ss.str();
-    const char* path = s.c_str();
-    std::ofstream file;
-    file.open (path);
-    file << "Kavosh 0.9.2 by Rodrigo M. Oliveira\n"
-            "-----------------------------------\n"
-            "\n"
-            "Results:\n"
-            "\n";
-    for(int m=0; m<Motifs.size(); m++) {
-        std::vector<bool> marker(G.GetNodes(),false);
-        kSubgraphs->cursor = kSubgraphs->ini->next;
-        while(kSubgraphs->cursor) {
-            if(kSubgraphs->cursor->label==Motifs[m]) {
-                for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
-                    marker[kSubgraphs->cursor->vertices.at(i)] = true;
-                }
-            }
-            kSubgraphs->cursor = kSubgraphs->cursor->next;
-        }
-        std::stringstream ss;
-        ss << "../results/motif_" << m << "_highlighted.gdf";
-        std::string s = ss.str();
-        const char* path = s.c_str();
-        std::ofstream file;
-        file.open (path);
-        file << "nodedef>name VARCHAR,color VARCHAR\n";
-        for(int i=0; i<marker.size(); i++) {
-            GDF << i << ",";
-            if(marker[i]) GDF << "'255,0,0'\n";
-            else GDF << "'0,0,0'\n";
-        }
-        GDF << "edgedef>node1 VARCHAR,node2 VARCHAR,directed BOOLEAN,color VARCHAR\n";
-        for(TNGraph::TEdgeI EI = G.BegEI(); EI < G.EndEI(); EI++) {
-            if(marker[EI.GetSrcNId()]>0 && marker[EI.GetDstNId()]) {
-                kSubgraphs->cursor = kSubgraphs->ini;
-                while(kSubgraphs->cursor->next || ((GDF << EI.GetSrcNId() << "," << EI.GetDstNId() << ",true,'0,0,0'\n") && printf("miracle\n") && 0==1) ) {
-                    kSubgraphs->cursor = kSubgraphs->cursor->next;
-                    int i;
-                    for(i=0; i<kSubgraphs->cursor->vertices.size(); i++) if(kSubgraphs->cursor->vertices.at(i)==EI.GetSrcNId()) break;
-                    if(i==kSubgraphs->cursor->vertices.size()) continue;
-                    for(i=0; i<kSubgraphs->cursor->vertices.size(); i++) if(kSubgraphs->cursor->vertices.at(i)==EI.GetDstNId()) break;
-                    if(i==kSubgraphs->cursor->vertices.size()) continue;
-                    GDF << EI.GetSrcNId() << "," << EI.GetDstNId() << ",true,'255,0,0'\n";
-                    break;
-                }
-                //if(!kSubgraphs->cursor->next) GDF << EI.GetSrcNId() << "," << EI.GetDstNId() << ",true,'0,0,0'\n";
-            }
-            else GDF << EI.GetSrcNId() << "," << EI.GetDstNId() << ",true,'0,0,0'\n";
-        }
-        GDF.close();
-    }
-    file.close();*/
 }
