@@ -36,5 +36,6 @@
 
 # Some directories
 networks/
-results/
+results*/
 tests/
+.idea/
