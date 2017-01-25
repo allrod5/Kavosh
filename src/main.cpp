@@ -30,14 +30,13 @@ int main(int argc, char* argv[]) {
 
     if (argc == 2) {
         if (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help") {
-            std::cerr   << "\nKavosh algorithm implemented by Rodrigo Martins de Oliveira" << std::endl
+            std::cerr   << "\nMotif and metamotif finding tool by Rodrigo Martins de Oliveira" << std::endl
                         << "This software takes as input a directed network and identifies the motifs "
-                        << "in it. The algorithm was extended to permit identifying metamotifs if "
-                        << "desired." << std::endl
+                        << "and metamotifs in it." << std::endl
                         << "\n Usage: ./Kavosh -ARGUMENTS [-OPTIONS]" << std::endl
                         << "\nARGUMENTS:" << std::endl
                         << "-i\t Input network. Accepts relative path. Must be an edgelist." << std::endl
-                        << "-o\t Output folder. Accepts relative path. Must to be created already." << std::endl
+                        << "-o\t Output folder. Accepts relative path. Must exists." << std::endl
                         << "-s\t Motif size. The size of the motifs to look for. The higher, the slower." << std::endl
                         << "-r\t Number of random networks. The more random networks, the more "
                         << "precise is the motif identification." << std::endl
@@ -45,7 +44,7 @@ int main(int argc, char* argv[]) {
                         << "-t\t Number of threads. Use an appropriate number of threads for your machine." << std::endl
                         << "--metamotifs\t Perform metamotifs identification. For this "
                         << "option to work correctly a folder named 'metamotifs' must exist inside "
-                        << "the output folder informed as argument.\n" << std::endl;
+                        << "the output folder passed as argument.\n" << std::endl;
             return 1;
         }
     }
@@ -68,6 +67,7 @@ int main(int argc, char* argv[]) {
                 source = argv[++i];                                     // Increment 'i' so we don't get the argument as the next argv[i].
             } else {                                                    // Unsufficient arguments
                 std::cerr << "Option -i requires one argument!" << std::endl;
+                std::cerr << "For more help run: " << argv[0] << " -h\n" << std::endl;
                 return 1;
             }
         } else if(std::string(argv[i]) == "-o") {
@@ -75,6 +75,7 @@ int main(int argc, char* argv[]) {
                 destination = argv[++i];
             } else {                                                    // Unsufficient arguments
                 std::cerr << "Option -o requires one argument!" << std::endl;
+                std::cerr << "For more help run: " << argv[0] << " -h\n" << std::endl;
                 return 1;
             }
         } else if(std::string(argv[i]) == "-s") {
@@ -84,6 +85,7 @@ int main(int argc, char* argv[]) {
                 value >> motif_size;
             } else {                                                    // Unsufficient arguments
                 std::cerr << "Option -s requires one argument!" << std::endl;
+                std::cerr << "For more help run: " << argv[0] << " -h\n" << std::endl;
                 return 1;
             }
         } else if(std::string(argv[i]) == "-r") {
@@ -93,6 +95,7 @@ int main(int argc, char* argv[]) {
                 value >> num_null_models;
             } else {                                                    // Unsufficient arguments
                 std::cerr << "Option -r requires one argument!" << std::endl;
+                std::cerr << "For more help run: " << argv[0] << " -h\n" << std::endl;
                 return 1;
             }
         } else if(std::string(argv[i]) == "-t") {
@@ -102,6 +105,7 @@ int main(int argc, char* argv[]) {
                 value >> t;
             } else {                                                    // Unsufficient arguments
                 std::cerr << "Option -t requires one argument!" << std::endl;
+                std::cerr << "For more help run: " << argv[0] << " -h\n" << std::endl;
                 return 1;
             }
         }  else if(std::string(argv[i]) == "--metamotifs") {
@@ -111,6 +115,7 @@ int main(int argc, char* argv[]) {
                 value >> metamotifs;
             } else {                                                    // Unsufficient arguments
                 std::cerr << "Option --metamotifs requires one argument!" << std::endl;
+                std::cerr << "For more help run: " << argv[0] << " -h\n" << std::endl;
                 return 1;
             }
         } else {
