@@ -8,6 +8,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <unordered_map>
 #include "gtools.h"
 #include "nauty.h"
 //#include "nausparse.h"
@@ -18,16 +19,6 @@
 #endif
 
 namespace GD {
-    struct Cell;
-    struct Class;
-    class GraphList {
-    public:
-        GraphList();
-        ~GraphList();
-        void AddGraph();
-        Cell* ini;
-        Cell* cursor;
-    };
 
     class MetaObject {
     public:
@@ -38,11 +29,12 @@ namespace GD {
         std::map<int, std::vector<int>*> *metaMap;
     };
 
-    void Enumerate(TNGraph&, unsigned long, GD::GraphList*);
+    void Enumerate(TNGraph&, int, std::unordered_map<std::multiset<unsigned long>, int>&, optionblk&, int, set*);
 
-    void Explore(TNGraph&, std::vector<std::vector<int>>&, int, std::vector<bool>&,
-                    std::vector<int>&, std::vector<int>&, GD::GraphList*,
-                 unsigned long);
+    void Explore(TNGraph&, std::vector<std::vector<int>>&, int, std::vector<bool>&, std::vector<int>&,
+                 std::vector<int>&, std::unordered_map<std::multiset<unsigned long>, int>&, int, int, optionblk&, int, set*);
+
+    std::multiset<unsigned long>& Classify(TNGraph&, std::vector<int>&, int, optionblk&, int, set*);
 
     void mapNeighbors(TNGraph&, std::vector<std::vector<int>>&);
 
@@ -53,23 +45,20 @@ namespace GD {
 
     void updateIndex(std::vector<int>&, unsigned long);
 
-    void Classify(TNGraph&, GD::GraphList*, int, optionblk&, int, set*);
-
     TNGraph* Randomize(TNGraph&);
-
-    void GetFrequencies(GD::GraphList*, std::map<std::multiset<unsigned long>, int>&);
 
     void DiscoverMotifs(std::vector<std::map<std::multiset<unsigned long>, int>>&,
                         std::vector<std::multiset<unsigned long>>&, std::vector<unsigned long>&,
-                        int, std::string, TNGraph&, GD::GraphList*);
+                        int, std::string, TNGraph&, std::unordered_map<std::multiset<unsigned long>, int>&);
 
-    TNGraph* ConcatMotifs(TNGraph&, std::vector<std::multiset<unsigned long>>&, GD::GraphList*, GD::MetaObject*);
+    TNGraph* ConcatMotifs(TNGraph&, std::vector<std::multiset<unsigned long>>&,
+                          std::unordered_map<std::multiset<unsigned long>, int>&, GD::MetaObject*);
 
     void ExportGDF(TNGraph&, std::vector<std::multiset<unsigned long>>*, std::vector<unsigned long>*,
-                    GD::GraphList*, std::string, GD::MetaObject*);
+                   std::unordered_map<std::multiset<unsigned long>, int>*, std::string, GD::MetaObject*);
 
     void PrintMotifs(TNGraph&, std::vector<std::multiset<unsigned long>>&, std::vector<unsigned long>&,
-                    GD::GraphList*, std::string, GD::MetaObject*);
+                     std::unordered_map<std::multiset<unsigned long>, int>&, std::string, GD::MetaObject*);
 
 }
 

@@ -6,32 +6,6 @@
 #include <fstream>
 #include <sstream>
 
-struct GD::Cell {
-    std::vector<int> vertices;
-    std::multiset<unsigned long> label;
-    Cell* next = NULL;
-};
-
-GD::GraphList::GraphList() {
-    ini = new Cell;
-    cursor = ini;
-}
-
-GD::GraphList::~GraphList() {
-    cursor = ini;
-    while(cursor) {
-        ini = cursor->next;
-        delete cursor;
-        cursor = ini;
-    }
-}
-
-void GD::GraphList::AddGraph() {
-    Cell* aux = new Cell;
-    cursor->next = aux;
-    cursor = aux;
-}
-
 GD::MetaObject::MetaObject(PNGraph &G) {
     this->G = &*G;
     metaMap = new std::map<int, std::vector<int>*>;
@@ -56,28 +30,39 @@ GD::MetaObject::MetaObject(GD::MetaObject &metaObj) {
     int COUNTER = 0;
 #endif
 
-void GD::Enumerate(TNGraph &G, unsigned long k, GD::GraphList *kSubgraphs) {
+void GD::Enumerate(TNGraph &G, int k, std::unordered_map<std::multiset<unsigned long>, int> &kSubgraphs,
+                   optionblk &options, int m, set *dnwork)
+{
     uint64 t0 = GetTimeMs64();
     std::vector<std::vector<int>> Neighbors((size_t) G.GetMxNId());
     uint64 t1 = GetTimeMs64();
-    GD::mapNeighbors(G, Neighbors);                                                // map neighbors for all vertices to avoid repeatly discovering the neighborhood of a vertex
+    // map neighbors for all vertices to avoid repeatly discovering the neighborhood of a vertex
+    GD::mapNeighbors(G, Neighbors);
     uint64 t2 = GetTimeMs64();
     #ifdef DEBUG
         if(DEBUG_LEVEL>=1 || DEBUG_LEVEL==-1) printf("GetNodes: %lu ms\nMap Neighbors: %lu ms\n", t1-t0, t2-t1);
     #endif
-    //for(unsigned long i=0; G.IsNode(i); i++) {                                 // iterate through all vertices of G
+    // iterate through all vertices of G
+    //for(unsigned long i=0; G.IsNode(i); i++) {
     for (TNGraph::TNodeI NI = G.BegNI(); NI < G.EndNI(); NI++) {
         int i = NI.GetId();
         #ifdef DEBUG
             if(DEBUG_LEVEL>=2) printf("Root: %d\n", i);
         #endif
-        std::vector<bool> Visited((size_t) G.GetMxNId());                                 // list to keep track of visited vertices
-        Visited[i] = true;                                                         // mark the current root as visited
-        std::vector<int> S(1);                                    // vertices selected in current level
-        S[0] = i;                                                                // only the root is selected in the first level
-        std::vector<int> subgraph(S);                                // vector to store the vertices of the subgraph
-        GD::Explore(G, Neighbors, i, Visited, S, subgraph, kSubgraphs, k-1);    // Explore all possible combinations that generete different trees
-        Visited[i] = false;                                                        // unmark current root as visited at the end
+        // list to keep track of visited vertices
+        std::vector<bool> Visited((size_t) G.GetMxNId());
+        // mark the current root as visited
+        Visited[i] = true;
+        // vertices selected in current level
+        std::vector<int> S(1);
+        // only the root is selected in the first level
+        S[0] = i;
+        // vector to store the vertices of the subgraph
+        std::vector<int> subgraph(S);
+        // Explore all possible combinations that generete different trees
+        GD::Explore(G, Neighbors, i, Visited, S, subgraph, kSubgraphs, k-1, k, options, m, dnwork);
+        // unmark current root as visited at the end
+        Visited[i] = false;
     }
     uint64 t5 = GetTimeMs64();
     #ifdef DEBUG
@@ -89,16 +74,19 @@ void GD::Enumerate(TNGraph &G, unsigned long k, GD::GraphList *kSubgraphs) {
     #endif
 }
 
-void GD::Explore(TNGraph &G, std::vector<std::vector<int>> &Neighbors, int root,
-    std::vector<bool> &Visited, std::vector<int> &S, std::vector<int> &subgraph,
-    GD::GraphList *kSubgraphs, unsigned long Remainder) {
+void GD::Explore(TNGraph &G, std::vector<std::vector<int>> &Neighbors, int root, std::vector<bool> &Visited,
+                 std::vector<int> &S, std::vector<int> &subgraph,
+                 std::unordered_map<std::multiset<unsigned long>, int> &kSubgraphs, int Remainder, int motif_size,
+                 optionblk &options, int m, set *dnwork)
+{
     #ifdef DEBUG
         LEVEL++;
     #endif
     uint64 t0 = GetTimeMs64();
-    if(Remainder==0) {                                // if there are no more vertices to select the k-subgraph is formed (trivial case of the recursion)
-        kSubgraphs->AddGraph();                        // then add it to my
-        kSubgraphs->cursor->vertices = subgraph;    // my data structure
+    // if there are no more vertices to select the k-subgraph is formed
+    if(Remainder==0) {
+        kSubgraphs.insert(std::make_pair(Classify(G, subgraph, motif_size, options, m, dnwork), 0))
+                .first.operator*().second++;
         #ifdef DEBUG
             COUNTER++;                                    // count one more k-subgraph discovered
             if(DEBUG_LEVEL>=2) {
@@ -111,10 +99,13 @@ void GD::Explore(TNGraph &G, std::vector<std::vector<int>> &Neighbors, int root,
         #endif
         return;
     }
-    std::vector<int> ValList;                            // create a vector to store valid children at this level of the tree
-    GD::Validate(Neighbors, Visited, S, root, ValList);                // fill the vector with the actual children
+    // create a vector to store valid children at this level of the tree
+    std::vector<int> ValList;
+    // fill the vector with the actual children
+    GD::Validate(Neighbors, Visited, S, root, ValList);
     uint64 t1 = GetTimeMs64();
-    unsigned long n = std::min(ValList.size(), Remainder); // get the number of vertices to select at this level
+    // get the number of vertices to select at this level
+    int n = (int) std::min(ValList.size(), (const unsigned long &) Remainder);
     #ifdef DEBUG
         if(DEBUG_LEVEL>=4 || DEBUG_LEVEL==-1) printf("\tExplore > Validade: %lu ms\n", t1-t0);
         if(DEBUG_LEVEL>=2) {
@@ -124,10 +115,13 @@ void GD::Explore(TNGraph &G, std::vector<std::vector<int>> &Neighbors, int root,
             printf("\n");
         }
     #endif
-    for(unsigned long i=1; i<=n; i++) {                                            // iterate from selecting a single vertex to selecting n vertices
-        std::vector<int> Index(ValList.size()-i, 0);                    // create a vector to keep track of which vertices to delete from ValList in order to generate a combination
-        std::vector<int> C = GD::genComb(i, ValList, Index, 0);        // generate the initial combination
-        do {                                                                                                    // repeat
+    // iterate from selecting a single vertex to selecting n vertices
+    for(int i=1; i<=n; i++) {
+        // create a vector to keep track of which vertices to delete from ValList in order to generate a combination
+        std::vector<int> Index(ValList.size()-i, 0);
+        // generate the initial combination
+        std::vector<int> C = GD::genComb(i, ValList, Index, 0);
+        do {
             #ifdef DEBUG
                 if(DEBUG_LEVEL>=2) {
                     for(unsigned long p=0; p<LEVEL; p++) printf("\t");
@@ -136,22 +130,88 @@ void GD::Explore(TNGraph &G, std::vector<std::vector<int>> &Neighbors, int root,
                     printf("\n");
                 }
             #endif
-            subgraph.insert(subgraph.end(), C.begin(), C.end());                                                // compose subgraph with the current combination
-            GD::Explore(G, Neighbors, root, Visited, C, subgraph, kSubgraphs, Remainder-i);                        // recursive call to advance to next level of the implicit tree
+            // compose subgraph with the current combination
+            subgraph.insert(subgraph.end(), C.begin(), C.end());
+            // recursive call to advance to next level of the implicit tree
+            GD::Explore(G, Neighbors, root, Visited, C, subgraph, kSubgraphs, Remainder-i, motif_size, options, m, dnwork);
             uint64 t2 = GetTimeMs64();
-            GD::updateIndex(Index, i);                                                                            // update Index to generate the next combination
-            C = GD::genComb(i, ValList, Index, 0);                                                                // generate next combination
+            // update Index to generate the next combination
+            GD::updateIndex(Index, i);
+            // generate next combination
+            C = GD::genComb(i, ValList, Index, 0);
             uint64 t3 = GetTimeMs64();
             #ifdef DEBUG
                 if(DEBUG_LEVEL>=4 || DEBUG_LEVEL==-1) printf("Get next combination time: %lu ms\n", t3-t2);
             #endif
-            subgraph.erase(subgraph.end() - C.size(), subgraph.end());                                            // clear old combination from the subgraph "constructor"
+            // clear old combination from the subgraph "constructor"
+            subgraph.erase(subgraph.end() - C.size(), subgraph.end());
         } while(!Index.empty() && Index.back()!=0);
     }
-    for(size_t i=0; i<ValList.size(); i++) Visited.at((size_t) ValList[i]) = false;    // unmark selected vertices at current level
+    // unmark selected vertices at current level
+    for(size_t i=0; i<ValList.size(); i++) Visited.at((size_t) ValList[i]) = false;
     #ifdef DEBUG
         LEVEL--;
     #endif
+}
+
+
+std::multiset<unsigned long>& GD::Classify(TNGraph &G, std::vector<int> &subgraph, int n, optionblk &options, int m, set *dnwork) {
+    DYNALLSTAT(graph,g,g_sz);
+    DYNALLSTAT(graph,canon,canon_sz);
+    DYNALLSTAT(int,lab,lab_sz);
+    DYNALLSTAT(int,ptn,ptn_sz);
+    DYNALLSTAT(int,orbits,orbits_sz);
+
+    statsblk stats;
+
+    DYNALLOC2(graph,g,g_sz,m,n,"malloc");
+    DYNALLOC2(graph,canon,canon_sz,m,n,"malloc");
+    DYNALLOC1(int,lab,lab_sz,n,"malloc");
+    DYNALLOC1(int,ptn,ptn_sz,n,"malloc");
+    DYNALLOC1(int,orbits,orbits_sz,n,"malloc");
+
+    EMPTYGRAPH(g,m,n);
+    for(int i=0; i<n; i++) {
+        int a = subgraph.at((size_t) i);
+        for(int j=0; j<n; j++) {
+            int b = subgraph.at((size_t) j);
+            if(G.GetNI(a).IsOutNId(b)) {
+                ADDONEARC(g,i,j,m);
+            }
+        }
+    }
+
+    //densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canon);
+    nauty(g,lab,ptn,NULL,orbits,&options,&stats,dnwork,2*60*m,m,n,canon);
+
+    std::multiset<unsigned long> *label = new std::multiset<unsigned long>;
+
+    for(int i=0; i<m*n; i++)
+        label->insert(canon[i]);
+#ifdef DEBUG
+        if(DEBUG_LEVEL>=3) {
+                for(unsigned long i=0; i<kSubgraphs->cursor->label.size(); i++) {
+                    printf("%lu ", kSubgraphs->cursor->label.at(i));
+                }
+                printf("= ");
+                for(unsigned long i=0; i<n; i++) {
+                    printf("%lu ", kSubgraphs->cursor->vertices.at(i));
+                }
+                printf("\n");
+            }
+#endif
+
+
+    DYNFREE(g,g_sz);
+    DYNFREE(canon,canon_sz);
+    DYNFREE(lab,lab_sz);
+    DYNFREE(ptn,ptn_sz);
+    DYNFREE(orbits,orbits_sz);
+    //nauty_freedyn();
+    //nautil_freedyn();
+    //naugraph_freedyn();
+
+    return *label;
 }
 
 void GD::mapNeighbors(TNGraph &G, std::vector<std::vector<int>> &Neighbors) {
@@ -172,11 +232,16 @@ void GD::mapNeighbors(TNGraph &G, std::vector<std::vector<int>> &Neighbors) {
 }
 
 void GD::Validate(std::vector<std::vector<int>>& Neighbors, std::vector<bool> &Visited, std::vector<int> &S, int root, std::vector<int> &ValList) {
-    for(unsigned long i=0; i<S.size(); i++) {                            // S is the selected children of the last level (or root)
-        for(unsigned long j=0; j<Neighbors[S[i]].size(); j++) {            // j is the label of possible children, which can't be greater than root
-            if(Neighbors[S[i]][j]>root && !Visited[Neighbors[S[i]][j]]) {    // if not visited and it's in the neighborhood of S[i]
-                Visited[Neighbors[S[i]][j]] = true;                            // mark as visited
-                ValList.push_back(Neighbors[S[i]][j]);                        // include as valid children
+    // S is the selected children of the last level (or root)
+    for(unsigned long i=0; i<S.size(); i++) {
+        // j is the label of possible children, which can't be greater than root
+        for(unsigned long j=0; j<Neighbors[S[i]].size(); j++) {
+            // if not visited and it's in the neighborhood of S[i]
+            if(Neighbors[S[i]][j]>root && !Visited[Neighbors[S[i]][j]]) {
+                // mark as visited
+                Visited[Neighbors[S[i]][j]] = true;
+                // include as valid children
+                ValList.push_back(Neighbors[S[i]][j]);
             }
         }
     }
@@ -190,77 +255,24 @@ std::vector<int> GD::genComb(unsigned long i, std::vector<int> ValList, std::vec
 }
 
 void GD::updateIndex(std::vector<int> &Index, unsigned long n) {
-    if(Index.empty()) return;                    // nothing to update if Index is empty
-    unsigned long i = Index.size() - 1;        // go to last position of Index
-    Index[i]++;                                    // increase it
-    for(i; i>0; i--) {                            // ascend Index
-        if(Index[i]>n) Index[i-1]++;            // if the current position's value overpasses n "send one" to the position before
-        else break;                                // if not then there is no need to keep ascending
+    // nothing to update if Index is empty
+    if(Index.empty()) return;
+    // go to last position of Index
+    unsigned long i = Index.size() - 1;
+    // increase it
+    Index[i]++;
+    // ascend Index
+    for(i; i>0; i--) {
+        // if the current position's value overpasses n "send one" to the position before
+        if(Index[i]>n) Index[i-1]++;
+        // if not then there is no need to keep ascending
+        else break;
     }
-    if(Index[i]>n) Index[i] = 0;                // if Index[i]>n it means i==0 so no way to "send one" as there is no position before, so cycle back to 0
+    // if Index[i]>n it means i==0 so no way to "send one" as there is no position before, so cycle back to 0
+    if(Index[i]>n) Index[i] = 0;
     if(Index[++i]>Index[i-1])
         for(i; i<Index.size(); i++)
             Index[i] = Index[i-1];
-}
-
-void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, int n, optionblk &options, int m, set *dnwork) {
-    kSubgraphs->cursor = kSubgraphs->ini->next;
-
-
-    DYNALLSTAT(graph,g,g_sz);
-    DYNALLSTAT(graph,canon,canon_sz);
-    DYNALLSTAT(int,lab,lab_sz);
-    DYNALLSTAT(int,ptn,ptn_sz);
-    DYNALLSTAT(int,orbits,orbits_sz);
-
-    statsblk stats;
-
-    DYNALLOC2(graph,g,g_sz,m,n,"malloc");
-    DYNALLOC2(graph,canon,canon_sz,m,n,"malloc");
-    DYNALLOC1(int,lab,lab_sz,n,"malloc");
-    DYNALLOC1(int,ptn,ptn_sz,n,"malloc");
-    DYNALLOC1(int,orbits,orbits_sz,n,"malloc");
-
-    while(kSubgraphs->cursor) {
-        EMPTYGRAPH(g,m,n);
-        for(int i=0; i<n; i++) {
-            int a = kSubgraphs->cursor->vertices.at((size_t) i);
-            for(int j=0; j<n; j++) {
-                int b = kSubgraphs->cursor->vertices.at((size_t) j);
-                if(G.GetNI(a).IsOutNId(b)) {
-                    ADDONEARC(g,i,j,m);
-                }
-            }
-        }
-
-        //densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canon);
-        nauty(g,lab,ptn,NULL,orbits,&options,&stats,dnwork,2*60*m,m,n,canon);
-        for(int i=0; i<m*n; i++)
-            kSubgraphs->cursor->label.insert(canon[i]);
-        #ifdef DEBUG
-            if(DEBUG_LEVEL>=3) {
-                for(unsigned long i=0; i<kSubgraphs->cursor->label.size(); i++) {
-                    printf("%lu ", kSubgraphs->cursor->label.at(i));
-                }
-                printf("= ");
-                for(unsigned long i=0; i<n; i++) {
-                    printf("%lu ", kSubgraphs->cursor->vertices.at(i));
-                }
-                printf("\n");
-            }
-        #endif
-
-        kSubgraphs->cursor = kSubgraphs->cursor->next;
-    }
-
-    DYNFREE(g,g_sz);
-    DYNFREE(canon,canon_sz);
-    DYNFREE(lab,lab_sz);
-    DYNFREE(ptn,ptn_sz);
-    DYNFREE(orbits,orbits_sz);
-    //nauty_freedyn();
-    //nautil_freedyn();
-    //naugraph_freedyn();
 }
 
 TNGraph* GD::Randomize(TNGraph &G) {
@@ -288,27 +300,10 @@ TNGraph* GD::Randomize(TNGraph &G) {
     return R;
 }
 
-void GD::GetFrequencies(GD::GraphList* kSubgraphs, std::map<std::multiset<unsigned long>, int> &Frequencies) {
-    kSubgraphs->cursor = kSubgraphs->ini->next;
-    while(kSubgraphs->cursor) {
-        Frequencies[kSubgraphs->cursor->label]++;
-        kSubgraphs->cursor = kSubgraphs->cursor->next;
-    }
-
-    #ifdef DEBUG
-        if(DEBUG_LEVEL>=3)
-            std::map<std::multiset<unsigned long>, int>::iterator it;
-            for(it = Frequencies.begin(); it != Frequencies.end(); it++) {
-                for(unsigned long i=0; i<it->first.size(); i++)
-                    printf("%lu ", (it->first).at(i));
-                printf(": %lu\n", it->second);
-            }
-    #endif
-}
-
 void GD::DiscoverMotifs(std::vector<std::map<std::multiset<unsigned long>, int>> &FVector,
                         std::vector<std::multiset<unsigned long>> &Motifs, std::vector<unsigned long> &IDs,
-                        int motif_size, std::string destination, TNGraph &G, GD::GraphList *kSubgraphs)
+                        int motif_size, std::string destination, TNGraph &G,
+                        std::unordered_map<std::multiset<unsigned long>, int> &kSubgraphs)
 {
     std::map<std::multiset<unsigned long>, int>::iterator i;
     std::stringstream ss;
@@ -445,7 +440,8 @@ void GD::DiscoverMotifs(std::vector<std::map<std::multiset<unsigned long>, int>>
     #endif
 }
 
-TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::multiset<unsigned long>> &Motifs, GD::GraphList *kSubgraphs, GD::MetaObject *metaObj)
+TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::multiset<unsigned long>> &Motifs,
+                          std::unordered_map<std::multiset<unsigned long>, int> &kSubgraphs, GD::MetaObject *metaObj)
 {
     #ifdef DEBUG
         if(DEBUG_LEVEL>=1) {
@@ -545,7 +541,8 @@ TNGraph* GD::ConcatMotifs(TNGraph &G, std::vector<std::multiset<unsigned long>> 
 }
 
 void GD::ExportGDF(TNGraph &G, std::vector<std::multiset<unsigned long>> *Motifs, std::vector<unsigned long> *IDs,
-                    GD::GraphList *kSubgraphs, std::string destination, GD::MetaObject *metaObj)
+                   std::unordered_map<std::multiset<unsigned long>, int> *kSubgraphs, std::string destination,
+                   GD::MetaObject *metaObj)
 {
     int size;
     if(Motifs!=NULL) {
@@ -673,7 +670,8 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::multiset<unsigned long>> *Motifs
 }
 
 void GD::PrintMotifs(TNGraph &G, std::vector<std::multiset<unsigned long>> &Motifs, std::vector<unsigned long> &IDs,
-                     GD::GraphList *kSubgraphs, std::string destination, GD::MetaObject *metaObj)
+                     std::unordered_map<std::multiset<unsigned long>, int> &kSubgraphs, std::string destination,
+                     GD::MetaObject *metaObj)
 {
     for(int m=0; m<Motifs.size(); m++) {
         PNGraph motif = TNGraph::New();
