@@ -6,19 +6,17 @@ Compile with "g++ -Ofast -DDEBUG -march=native -flto -fwhole-program -o main mai
 #include <GraphData.hpp>
 #include <GetTimeMs64.hpp>
 #include <sstream>
-#include <atomic>
 #include <thread>
-#include <bits/unordered_map.h>
 
 #ifdef DEBUG
     int DEBUG_LEVEL;
 #endif
 
 struct KavoshData;
-void Kavosh(std::string, std::string, int, int, int, int t);
-KavoshData Kavosh(PNGraph &, std::string, int, int, int, GD::MetaObject &, int t);
-void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomic_int> counter, int num_null_models,
-                           optionblk options, int m, set *dnwork);
+void Kavosh(std::string, std::string, int, int, int, int);
+void Kavosh(PNGraph &, std::string, int, int, int, GD::MetaObject &, int);
+void proccessRandomNetwork(PNGraph, int , std::shared_ptr<std::atomic_int>, int, optionblk, int, set*,
+                           std::shared_ptr<GD::graphmap>);
 
 int main(int argc, char* argv[]) {
 
@@ -58,8 +56,8 @@ int main(int argc, char* argv[]) {
     std::string source;
     std::string destination;
     int metamotifs = 0;
-    int motif_size = nullptr;
-    int num_null_models = nullptr;
+    int motif_size = 0;
+    int num_null_models = 0;
     int t = 1;
     for (int i = 1; i < argc; ++i) {
         if (std::string(argv[i]) == "-i") {
@@ -130,7 +128,7 @@ int main(int argc, char* argv[]) {
         std::cout << "\n::::::::::::::::START::::::::::::::::\n";
     #endif
 
-    if (motif_size == nullptr || num_null_models == nullptr)
+    if (motif_size == 0 || num_null_models == 0)
         return 1;
 
     Kavosh(source, destination, metamotifs, motif_size, num_null_models, t);
@@ -164,12 +162,13 @@ void Kavosh(std::string source, std::string destination, int metamotifs, int mot
     PNGraph G = TSnap::LoadEdgeList<PNGraph>(file_path, 0, 1);
     GD::MetaObject metaObj(G);
     KavoshData kd(G, destination, metamotifs, motif_size, num_null_models, metaObj, t);
+    Kavosh(kd.G, kd.destination, kd.metamotifs, kd.motif_size, kd.num_null_models, *kd.metaObj, kd.t);
     while (kd.metamotifs>=0) {
-        kd = Kavosh(kd.G, kd.destination, kd.metamotifs, kd.motif_size, kd.num_null_models, *kd.metaObj, kd.t);
+        /*kd = Kavosh(kd.G, kd.destination, kd.metamotifs, kd.motif_size, kd.num_null_models, *kd.metaObj, kd.t);*/
     }
 }
 
-KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif_size, int num_null_models,
+void Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif_size, int num_null_models,
             GD::MetaObject &metaObj, int t)
 {
 
@@ -193,11 +192,11 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
 
     //char const* file_path = source.c_str();
 
-    std::unordered_map<std::multiset<unsigned long>, int> kSubgraphs;
     std::vector<unsigned long> IDs;
     std::vector<std::multiset<unsigned long>> Motifs;
     std::vector<std::thread> threads;
-    std::shared_ptr<std::atomic_int> shared_counter (new std::atomic_int (0));
+    std::shared_ptr<GD::graphmap> kSubgraphs = std::make_shared<GD::graphmap>();
+    std::shared_ptr<std::atomic_int> shared_counter = std::make_shared<std::atomic_int>(0);
     int m = SETWORDSNEEDED(motif_size);
     nauty_check(WORDSIZE,m,motif_size,NAUTYVERSIONID);
     DYNALLSTAT(set,dnwork,dnwork_sz);
@@ -214,7 +213,7 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
             printf("Starting enumeration...\n");
     #endif
     uint64 t0 = GetTimeMs64();
-    GD::Enumerate(*G, motif_size, kSubgraphs, options, m, dnwork);
+    GD::Enumerate(*G, motif_size, kSubgraphs, options, m, dnwork, true, num_null_models);
     #ifdef DEBUG
         if(DEBUG_LEVEL>=1)
             printf("Enumeration done!\nStarting classification...\n");
@@ -238,12 +237,12 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
     freq_time += t3-t2;
 
     for(int i=0; i<t; i++) threads.push_back(
-                std::thread(proccessRandomNetwork, G, motif_size, shared_counter, num_null_models, options, m, dnwork));
+                std::thread(proccessRandomNetwork, G, motif_size, shared_counter, num_null_models, options, m, dnwork, kSubgraphs));
 
     for(auto& th : threads) th.join();
 
     uint64 t10 = GetTimeMs64();
-    GD::DiscoverMotifs(Motifs, IDs, motif_size, destination, *G, kSubgraphs);
+    GD::DiscoverMotifs(Motifs, IDs, motif_size, destination, *G, kSubgraphs, num_null_models);
     uint64 t11 = GetTimeMs64();
 
     uint64 finish_time = GetTimeMs64();
@@ -252,7 +251,7 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
                    "Getting frequencies took %u ms\n Discovering motifs took %u ms\n", Motifs.size(),
            finish_time - start_time, enum_time, class_time, freq_time, t11-t10);
 
-    GD::ExportGDF(*G, &Motifs, &IDs, &kSubgraphs, destination, &metaObj);
+    /*GD::ExportGDF(*G, &Motifs, &IDs, &kSubgraphs, destination, &metaObj);
     GD::PrintMotifs(*G, Motifs, IDs, kSubgraphs, destination, &metaObj);
 
     TNGraph *H = GD::ConcatMotifs(*G, Motifs, kSubgraphs, &metaObj);
@@ -261,18 +260,18 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
     TSnap::SaveEdgeList(H2, "concatenated_motifs.txt");
     //Kavosh(H2, destination + "metamotifs/", metamotifs - 1, motif_size, num_null_models, metaObj, 0);
 
-    return KavoshData(H2, destination + "metamotifs/", metamotifs - 1, motif_size, num_null_models, metaObj, t);
+    return KavoshData(H2, destination + "metamotifs/", metamotifs - 1, motif_size, num_null_models, metaObj, t);*/
+    return;
 }
 
 void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomic_int> counter, int num_null_models,
-                           optionblk options, int m, set *dnwork)
+                           optionblk options, int m, set *dnwork, std::shared_ptr<GD::graphmap> kSubgraphs)
 {
     uint64 t3 = GetTimeMs64();
     for(int pos = counter->fetch_add(1); pos <= num_null_models; pos = counter->fetch_add(1)) {
         if (pos%100==0)
             std::cerr << pos << std::endl;
 
-        std::unordered_map<std::multiset<unsigned long>, int> kRSubgraphs;
         #ifdef DEBUG
                 if(DEBUG_LEVEL>=2)
                             printf("Starting randomization...\n");
@@ -300,7 +299,7 @@ void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomi
             }
         #endif
         uint64 t6 = GetTimeMs64();
-        GD::Enumerate(*R, motif_size, kRSubgraphs, options, m, dnwork);
+        GD::Enumerate(*R, motif_size, kSubgraphs, options, m, dnwork, false, pos);
         uint64 t7 = GetTimeMs64();
         //GD::Classify(*R, kRSubgraphs, motif_size, options, m, dnwork);
         uint64 t8 = GetTimeMs64();
@@ -313,6 +312,5 @@ void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomi
                             printf("%d. null model processed - Time consumed: %lu ms\n", pos, t9-t3);
         #endif
         delete R;
-        delete kRSubgraphs;
     }
 }

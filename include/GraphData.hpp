@@ -9,6 +9,9 @@
 #include <map>
 #include <set>
 #include <unordered_map>
+#include <atomic>
+#include <memory>
+#include <functional>
 #include "gtools.h"
 #include "nauty.h"
 //#include "nausparse.h"
@@ -18,7 +21,28 @@
     extern int DEBUG_LEVEL;
 #endif
 
+namespace std {
+    template <>
+    struct hash<std::multiset<unsigned long>>
+    {
+        std::size_t operator()(const std::multiset<unsigned long>& k) const
+        {
+            std::size_t r = 0;
+
+            bool shift = false;
+            for (auto&& it : k) {
+                r = (r >> !shift) ^ (std::hash<unsigned long>()(it) << shift);
+                shift = !shift;
+            }
+
+            return r;
+        }
+    };
+}
+
 namespace GD {
+
+    typedef std::unordered_map<std::multiset<unsigned long>, int*> graphmap;
 
     class MetaObject {
     public:
@@ -29,10 +53,10 @@ namespace GD {
         std::map<int, std::vector<int>*> *metaMap;
     };
 
-    void Enumerate(TNGraph&, int, std::unordered_map<std::multiset<unsigned long>, int>&, optionblk&, int, set*);
+    void Enumerate(TNGraph&, int, std::shared_ptr<graphmap>&, optionblk&, int, set*, bool, int);
 
     void Explore(TNGraph&, std::vector<std::vector<int>>&, int, std::vector<bool>&, std::vector<int>&,
-                 std::vector<int>&, std::unordered_map<std::multiset<unsigned long>, int>&, int, int, optionblk&, int, set*);
+                 std::vector<int>&, std::shared_ptr<graphmap>&, int, int, optionblk&, int, set*, bool, int);
 
     std::multiset<unsigned long>& Classify(TNGraph&, std::vector<int>&, int, optionblk&, int, set*);
 
@@ -41,15 +65,14 @@ namespace GD {
     void Validate(std::vector<std::vector<int>>&, std::vector<bool>&, std::vector<int>&,
                     int, std::vector<int>&);
 
-    std::vector<int> genComb(unsigned long, std::vector<int>, std::vector<int> &, unsigned long level);
+    std::vector<int> genComb(int, std::vector<int>, std::vector<int> &, int level);
 
-    void updateIndex(std::vector<int>&, unsigned long);
+    void updateIndex(std::vector<int>&, int);
 
     TNGraph* Randomize(TNGraph&);
 
-    void DiscoverMotifs(std::vector<std::map<std::multiset<unsigned long>, int>>&,
-                        std::vector<std::multiset<unsigned long>>&, std::vector<unsigned long>&,
-                        int, std::string, TNGraph&, std::unordered_map<std::multiset<unsigned long>, int>&);
+    void DiscoverMotifs(std::vector<std::multiset<unsigned long>>&, std::vector<unsigned long>&, int, std::string,
+                        TNGraph&, std::shared_ptr<graphmap>&, int);
 
     TNGraph* ConcatMotifs(TNGraph&, std::vector<std::multiset<unsigned long>>&,
                           std::unordered_map<std::multiset<unsigned long>, int>&, GD::MetaObject*);
