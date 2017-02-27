@@ -81,9 +81,9 @@ void GD::Explore(TNGraph &G, std::vector<std::vector<int>> &Neighbors, int root,
         LEVEL++;
     #endif
     uint64 t0 = GetTimeMs64();
-    // if there are no more vertices to select the k-subgraph is formed
+    // if there are no more vertices to select, then the k-subgraph is formed
     if(Remainder==0) {
-        int *v = (*kSubgraphs)[Classify(G, subgraph, motif_size, options, m, dnwork)];
+        int *v = (*kSubgraphs)[*Classify(G, subgraph, motif_size, options, m, dnwork)];
 
         if (v == nullptr) {
             if (!original) {
@@ -164,7 +164,7 @@ void GD::Explore(TNGraph &G, std::vector<std::vector<int>> &Neighbors, int root,
 }
 
 
-std::multiset<unsigned long>& GD::Classify(TNGraph &G, std::vector<int> &subgraph, int n, optionblk &options,
+std::multiset<unsigned long>* GD::Classify(TNGraph &G, std::vector<int> &subgraph, int n, optionblk &options,
                                            int m, set *dnwork)
 {
     DYNALLSTAT(graph,g,g_sz);
@@ -222,7 +222,7 @@ std::multiset<unsigned long>& GD::Classify(TNGraph &G, std::vector<int> &subgrap
     //nautil_freedyn();
     //naugraph_freedyn();
 
-    return *label;
+    return label;
 }
 
 void GD::mapNeighbors(TNGraph &G, std::vector<std::vector<int>> &Neighbors) {

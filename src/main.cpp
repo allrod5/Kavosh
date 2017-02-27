@@ -15,8 +15,8 @@ Compile with "g++ -Ofast -DDEBUG -march=native -flto -fwhole-program -o main mai
 struct KavoshData;
 void Kavosh(std::string, std::string, int, int, int, int);
 void Kavosh(PNGraph &, std::string, int, int, int, GD::MetaObject &, int);
-void proccessRandomNetwork(PNGraph, int , std::shared_ptr<std::atomic_int>, int, optionblk, int, set*,
-                           std::shared_ptr<GD::graphmap>);
+void proccessRandomNetwork(PNGraph, int , std::shared_ptr<std::atomic_int>*, int, optionblk, int, set*,
+                           std::shared_ptr<GD::graphmap>*);
 
 int main(int argc, char* argv[]) {
 
@@ -236,8 +236,8 @@ void Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif_size,
     class_time += t2-t1;
     freq_time += t3-t2;
 
-    for(int i=0; i<t; i++) threads.push_back(
-                std::thread(proccessRandomNetwork, G, motif_size, shared_counter, num_null_models, options, m, dnwork, kSubgraphs));
+    for(int i=0; i<t; i++) threads.push_back(std::thread(proccessRandomNetwork, G, motif_size, &shared_counter,
+                                                         num_null_models, options, m, dnwork, &kSubgraphs));
 
     for(auto& th : threads) th.join();
 
@@ -264,11 +264,11 @@ void Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif_size,
     return;
 }
 
-void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomic_int> counter, int num_null_models,
-                           optionblk options, int m, set *dnwork, std::shared_ptr<GD::graphmap> kSubgraphs)
+void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomic_int> *counter, int num_null_models,
+                           optionblk options, int m, set *dnwork, std::shared_ptr<GD::graphmap> *kSubgraphs)
 {
     uint64 t3 = GetTimeMs64();
-    for(int pos = counter->fetch_add(1); pos <= num_null_models; pos = counter->fetch_add(1)) {
+    for(int pos = (*counter)->fetch_add(1); pos <= num_null_models; pos = (*counter)->fetch_add(1)) {
         if (pos%100==0)
             std::cerr << pos << std::endl;
 
@@ -299,7 +299,7 @@ void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomi
             }
         #endif
         uint64 t6 = GetTimeMs64();
-        GD::Enumerate(*R, motif_size, kSubgraphs, options, m, dnwork, false, pos);
+        GD::Enumerate(*R, motif_size, *kSubgraphs, options, m, dnwork, false, pos);
         uint64 t7 = GetTimeMs64();
         //GD::Classify(*R, kRSubgraphs, motif_size, options, m, dnwork);
         uint64 t8 = GetTimeMs64();

@@ -58,7 +58,7 @@ namespace GD {
     void Explore(TNGraph&, std::vector<std::vector<int>>&, int, std::vector<bool>&, std::vector<int>&,
                  std::vector<int>&, std::shared_ptr<graphmap>&, int, int, optionblk&, int, set*, bool, int);
 
-    std::multiset<unsigned long>& Classify(TNGraph&, std::vector<int>&, int, optionblk&, int, set*);
+    std::multiset<unsigned long>* Classify(TNGraph&, std::vector<int>&, int, optionblk&, int, set*);
 
     void mapNeighbors(TNGraph&, std::vector<std::vector<int>>&);
 
