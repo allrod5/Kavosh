@@ -15,8 +15,7 @@ Compile with "g++ -Ofast -DDEBUG -march=native -flto -fwhole-program -o main mai
 struct KavoshData;
 void Kavosh(std::string, std::string, int, int, int, int);
 void Kavosh(PNGraph &, std::string, int, int, int, GD::MetaObject &, int);
-void proccessRandomNetwork(PNGraph, int , std::shared_ptr<std::atomic_int>*, int, optionblk, int, set*,
-                           std::shared_ptr<GD::graphmap>*);
+void proccessRandomNetwork(PNGraph, int , std::atomic_int*, int, optionblk, int, set*, GD::graphmap*);
 
 int main(int argc, char* argv[]) {
 
@@ -195,8 +194,8 @@ void Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif_size,
     std::vector<unsigned long> IDs;
     std::vector<std::multiset<unsigned long>> Motifs;
     std::vector<std::thread> threads;
-    std::shared_ptr<GD::graphmap> kSubgraphs = std::make_shared<GD::graphmap>();
-    std::shared_ptr<std::atomic_int> shared_counter = std::make_shared<std::atomic_int>(0);
+    GD::graphmap kSubgraphs = GD::graphmap();
+    std::atomic_int shared_counter(0);
     int m = SETWORDSNEEDED(motif_size);
     nauty_check(WORDSIZE,m,motif_size,NAUTYVERSIONID);
     DYNALLSTAT(set,dnwork,dnwork_sz);
@@ -264,11 +263,11 @@ void Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif_size,
     return;
 }
 
-void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomic_int> *counter, int num_null_models,
-                           optionblk options, int m, set *dnwork, std::shared_ptr<GD::graphmap> *kSubgraphs)
+void proccessRandomNetwork(PNGraph G, int motif_size, std::atomic_int *counter, int num_null_models, optionblk options,
+                           int m, set *dnwork, GD::graphmap *kSubgraphs)
 {
     uint64 t3 = GetTimeMs64();
-    for(int pos = (*counter)->fetch_add(1); pos <= num_null_models; pos = (*counter)->fetch_add(1)) {
+    for(int pos = counter->fetch_add(1); pos <= num_null_models; pos = counter->fetch_add(1)) {
         if (pos%100==0)
             std::cerr << pos << std::endl;
 

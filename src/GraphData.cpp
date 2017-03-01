@@ -29,8 +29,8 @@ GD::MetaObject::MetaObject(GD::MetaObject &metaObj) {
     int COUNTER = 0;
 #endif
 
-void GD::Enumerate(TNGraph &G, int k, std::shared_ptr<graphmap> &kSubgraphs, optionblk &options, int m, set *dnwork,
-                   bool original, int pos)
+void GD::Enumerate(TNGraph &G, int k, graphmap &kSubgraphs, optionblk &options, int m, set *dnwork, bool original,
+                   int pos)
 {
     uint64 t0 = GetTimeMs64();
     std::vector<std::vector<int>> Neighbors((size_t) G.GetMxNId());
@@ -74,7 +74,7 @@ void GD::Enumerate(TNGraph &G, int k, std::shared_ptr<graphmap> &kSubgraphs, opt
 }
 
 void GD::Explore(TNGraph &G, std::vector<std::vector<int>> &Neighbors, int root, std::vector<bool> &Visited,
-                 std::vector<int> &S, std::vector<int> &subgraph, std::shared_ptr<graphmap> &kSubgraphs, int Remainder,
+                 std::vector<int> &S, std::vector<int> &subgraph, graphmap &kSubgraphs, int Remainder,
                  int motif_size, optionblk &options, int m, set *dnwork, bool original, int pos)
 {
     #ifdef DEBUG
@@ -83,18 +83,25 @@ void GD::Explore(TNGraph &G, std::vector<std::vector<int>> &Neighbors, int root,
     uint64 t0 = GetTimeMs64();
     // if there are no more vertices to select, then the k-subgraph is formed
     if(Remainder==0) {
-        int *v = (*kSubgraphs)[*Classify(G, subgraph, motif_size, options, m, dnwork)];
+        int *v;
+        if (original) {
+            v = kSubgraphs[*Classify(G, subgraph, motif_size, options, m, dnwork)];
 
-        if (v == nullptr) {
-            if (!original) {
-                return;
+            if (v == nullptr) {
+                v = new int[pos + 1]();
             }
 
-            v = new int[pos]();
+            v[0]++;
+        } else {
+            try {
+                v = kSubgraphs.at(*Classify(G, subgraph, motif_size, options, m, dnwork));
+                if (v != nullptr) {
+                    v[pos]++;
+                }
+            } catch (std::out_of_range i) {
+                return;
+            }
         }
-
-        original ? v[0]++ : v[pos]++;
-
         #ifdef DEBUG
             COUNTER++;                                    // count one more k-subgraph discovered
             if(DEBUG_LEVEL>=2) {
@@ -314,8 +321,7 @@ TNGraph* GD::Randomize(TNGraph &G) {
 }
 
 void GD::DiscoverMotifs(std::vector<std::multiset<unsigned long>> &Motifs, std::vector<unsigned long> &IDs,
-                        int motif_size, std::string destination, TNGraph &G,
-                        std::shared_ptr<graphmap> &kSubgraphs, int r)
+                        int motif_size, std::string destination, TNGraph &G, graphmap &kSubgraphs, int r)
 {
     //std::map<std::multiset<unsigned long>, int>::iterator i;
     std::stringstream ss;
@@ -331,7 +337,7 @@ void GD::DiscoverMotifs(std::vector<std::multiset<unsigned long>> &Motifs, std::
 
     double MeanFrequency, StandardDeviation, Zscore, Pvalue;
 
-    for (auto&& it : *kSubgraphs) {
+    for (auto&& it : kSubgraphs) {
         MeanFrequency = 0.0;
         StandardDeviation = 0.0;
         Zscore = 0.0;
@@ -356,10 +362,11 @@ void GD::DiscoverMotifs(std::vector<std::multiset<unsigned long>> &Motifs, std::
         Zscore = (it.second[0] - MeanFrequency) / StandardDeviation;
 
         std::vector<int> *vertices = nullptr;
-    }
-        /*if (vertices == nullptr)
-            return;
 
+        if (vertices == nullptr)
+            return;
+    }
+    /*
         unsigned long ID = 0;
         unsigned long maxpow = (unsigned long) motif_size * (unsigned long) motif_size - 1;
         bool adjMatrix[motif_size][motif_size];
@@ -379,13 +386,6 @@ void GD::DiscoverMotifs(std::vector<std::multiset<unsigned long>> &Motifs, std::
             IDs.push_back(ID);
         }
 
-        *//*for(int j=motif_size-1; j>=0; j--) {
-            if(G.GetNI(vertices->at(motif_size-1)).IsOutNId(vertices->at(j)))
-                TXT << "1 ";
-            else
-                TXT << "0 ";
-        }*//*
-
         TXT << ID << "\t";
         if(ID<999)
             TXT << "\t";
@@ -400,16 +400,6 @@ void GD::DiscoverMotifs(std::vector<std::multiset<unsigned long>> &Motifs, std::
         TXT << std::fixed << std::setprecision(2) << "\t\t\t"
             << i->second << "\t\t\t\t" << MeanFrequency << "\t\t\t\t" << StandardDeviation << "\t\t\t\t\t"
             << Zscore << "\t\t\t\t" << Pvalue << "\n";
-
-        *//*for(int j=motif_size-2; j>=0; j--) {
-            for(int k=motif_size-1; k>=0; k--) {
-                if(G.GetNI(vertices->at(j)).IsOutNId(vertices->at(k)))
-                    TXT << "1 ";
-                else
-                    TXT << "0 ";
-            }
-            TXT << "\n";
-        }*//*
 
         for(int j=1; j<motif_size; j++) {
             TXT << "\t\t";
