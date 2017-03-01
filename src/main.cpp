@@ -14,11 +14,10 @@ Compile with "g++ -Ofast -DDEBUG -march=native -flto -fwhole-program -o main mai
 #endif
 
 struct KavoshData;
-void Kavosh(std::string, std::string, int, int, int, int t);
-KavoshData Kavosh(PNGraph &, std::string, int, int, int, GD::MetaObject &, int t);
-void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomic_int> counter, int num_null_models,
-                           std::shared_ptr<std::vector<std::map<std::multiset<unsigned long>, int>>> FVector,
-                           optionblk options, int m, set *dnwork);
+void Kavosh(std::string, std::string, int, int, int, int);
+KavoshData Kavosh(PNGraph &, std::string, int, int, int, GD::MetaObject &, int);
+void proccessRandomNetwork(PNGraph, int, std::atomic_int*, int, std::vector<std::map<std::multiset<unsigned long>, int>>*,
+                           optionblk , int , set*);
 
 int main(int argc, char* argv[]) {
 
@@ -193,11 +192,9 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
     GD::GraphList* kSubgraphs = new GD::GraphList;
     std::vector<unsigned long> IDs;
     std::vector<std::multiset<unsigned long>> Motifs;
-    //std::vector<std::map<std::vector<unsigned long>, unsigned long>> FVector(num_null_models+1);
-    std::shared_ptr<std::vector<std::map<std::multiset<unsigned long>, int>>> FVectorPtr
-            (new std::vector<std::map<std::multiset<unsigned long>, int>>(num_null_models+1));
+    std::vector<std::map<std::multiset<unsigned long>, int>> FVector(num_null_models+1);
     std::vector<std::thread> threads;
-    std::shared_ptr<std::atomic_int> shared_counter (new std::atomic_int (0));
+    std::atomic_int shared_counter(0);
     int m = SETWORDSNEEDED(motif_size);
     nauty_check(WORDSIZE,m,motif_size,NAUTYVERSIONID);
     DYNALLSTAT(set,dnwork,dnwork_sz);
@@ -226,7 +223,7 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
             printf("Classification done!\nGetting frequencies...\n");
     #endif
     uint64 t2 = GetTimeMs64();
-    GD::GetFrequencies(kSubgraphs, FVectorPtr->at((size_t) shared_counter->fetch_add(1)));
+    GD::GetFrequencies(kSubgraphs, FVector.at((size_t) shared_counter.fetch_add(1)));
     uint64 t3 = GetTimeMs64();
     #ifdef DEBUG
         if(DEBUG_LEVEL>=1)
@@ -238,12 +235,12 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
     freq_time += t3-t2;
 
     for(int i=0; i<t; i++) threads.push_back(
-                std::thread(proccessRandomNetwork, G, motif_size, shared_counter, num_null_models, FVectorPtr, options, m, dnwork));
+                std::thread(proccessRandomNetwork, G, motif_size, &shared_counter, num_null_models, &FVector, options, m, dnwork));
 
     for(auto& th : threads) th.join();
 
     uint64 t10 = GetTimeMs64();
-    GD::DiscoverMotifs(*FVectorPtr, Motifs, IDs, motif_size, destination, *G, kSubgraphs);
+    GD::DiscoverMotifs(FVector, Motifs, IDs, motif_size, destination, *G, kSubgraphs);
     uint64 t11 = GetTimeMs64();
 
     uint64 finish_time = GetTimeMs64();
@@ -264,9 +261,9 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
     return KavoshData(H2, destination + "metamotifs/", metamotifs - 1, motif_size, num_null_models, metaObj, t);
 }
 
-void proccessRandomNetwork(PNGraph G, int motif_size, std::shared_ptr<std::atomic_int> counter, int num_null_models,
-                           std::shared_ptr<std::vector<std::map<std::multiset
-                                   <unsigned long>, int>>> FVector, optionblk options, int m, set *dnwork)
+void proccessRandomNetwork(PNGraph G, int motif_size, std::atomic_int *counter, int num_null_models,
+                           std::vector<std::map<std::multiset<unsigned long>, int>> *FVector, optionblk options, int m,
+                           set *dnwork)
 {
     uint64 t3 = GetTimeMs64();
     for(int pos = counter->fetch_add(1); pos <= num_null_models; pos = counter->fetch_add(1)) {

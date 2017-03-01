@@ -637,7 +637,7 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::multiset<unsigned long>> *Motifs
                 //std::cerr << "\n";
                 kSubgraphs->cursor = kSubgraphs->cursor->next;
             }
-            printf("\n\nHMM\n\n");
+            //printf("\n\nHMM\n\n");
         }
 
         #ifdef DEBUG
@@ -669,7 +669,7 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::multiset<unsigned long>> *Motifs
         #endif
         GDF.close();
     }
-    printf("metaObj->G nodes: %d\n", metaObj->G->GetNodes());
+    //printf("metaObj->G nodes: %d\n", metaObj->G->GetNodes());
 }
 
 void GD::PrintMotifs(TNGraph &G, std::vector<std::multiset<unsigned long>> &Motifs, std::vector<unsigned long> &IDs,
