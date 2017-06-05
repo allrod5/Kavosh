@@ -239,12 +239,12 @@ void GD::Classify(TNGraph &G, GD::GraphList *kSubgraphs, int n, optionblk &optio
             kSubgraphs->cursor->label.insert(canon[i]);
         #ifdef DEBUG
             if(DEBUG_LEVEL>=3) {
-                for(unsigned long i=0; i<kSubgraphs->cursor->label.size(); i++) {
-                    printf("%lu ", kSubgraphs->cursor->label.at(i));
+                for(auto&& it : kSubgraphs->cursor->label) {
+                    printf("%lu ", it);
                 }
                 printf("= ");
                 for(unsigned long i=0; i<n; i++) {
-                    printf("%lu ", kSubgraphs->cursor->vertices.at(i));
+                    printf("%d ", kSubgraphs->cursor->vertices.at(i));
                 }
                 printf("\n");
             }
@@ -296,13 +296,14 @@ void GD::GetFrequencies(GD::GraphList* kSubgraphs, std::map<std::multiset<unsign
     }
 
     #ifdef DEBUG
-        if(DEBUG_LEVEL>=3)
+        if(DEBUG_LEVEL>=3) {
             std::map<std::multiset<unsigned long>, int>::iterator it;
-            for(it = Frequencies.begin(); it != Frequencies.end(); it++) {
-                for(unsigned long i=0; i<it->first.size(); i++)
-                    printf("%lu ", (it->first).at(i));
-                printf(": %lu\n", it->second);
+            for (it = Frequencies.begin(); it != Frequencies.end(); it++) {
+                for (auto&& el : it->first)
+                    printf("%lu ", el);
+                printf(": %d\n", it->second);
             }
+        }
     #endif
 }
 
@@ -423,10 +424,10 @@ void GD::DiscoverMotifs(std::vector<std::map<std::multiset<unsigned long>, int>>
 
         #ifdef DEBUG
             if(DEBUG_LEVEL>=0) {
-                for(unsigned long j=0; j<i->first.size(); j++) {
-                    printf("%lu ", i->first.at(j));
+                for(auto&& j : i->first) {
+                    printf("%lu ", j);
                 }
-                printf(": Original Frequency = %lu : Mean Frequency = %f : Standard Deviation = %f : Zscore = %f : Pvalue = %f\n", i->second, MeanFrequency, StandardDeviation, Zscore, Pvalue);
+                printf(": Original Frequency = %d : Mean Frequency = %f : Standard Deviation = %f : Zscore = %f : Pvalue = %f\n", i->second, MeanFrequency, StandardDeviation, Zscore, Pvalue);
             }
         #endif
     }
@@ -437,8 +438,8 @@ void GD::DiscoverMotifs(std::vector<std::map<std::multiset<unsigned long>, int>>
         if(DEBUG_LEVEL>=0) {
             for(int i=0; i<Motifs.size(); i++) {
                 printf("\nMotif %d label: ", i+1);
-                for(int j=0; j<Motifs[i].size(); j++)
-                    printf("%lu ", Motifs[i][j]);
+                for(auto&& j : Motifs[i])
+                    printf("%lu ", j);
                 printf("\n");
             }
         }
@@ -706,6 +707,6 @@ void GD::PrintMotifs(TNGraph &G, std::vector<std::multiset<unsigned long>> &Moti
         ss << destination << "motif_ID" << IDs[m] << ".png";
         std::string s = ss.str();
         const char* path = s.c_str();
-        TSnap::DrawGViz<PNGraph>(motif, gvlDot, path, "", NULL);
+        //TSnap::DrawGViz(motif, gvlDot, path, "", NULL);
     }
 }
