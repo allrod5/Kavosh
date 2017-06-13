@@ -40,14 +40,13 @@ namespace GD {
 
     void Enumerate(TNGraph&, unsigned long, GD::GraphList*);
 
-    void Explore(TNGraph&, std::vector<std::vector<int>>&, int, std::vector<bool>&,
-                    std::vector<int>&, std::vector<int>&, GD::GraphList*,
-                 unsigned long);
+    void Explore(
+            TNGraph&, std::vector<std::vector<int>>&, int, std::vector<bool>&, std::vector<int>&, std::vector<int>&,
+            GD::GraphList*, unsigned long);
 
     void mapNeighbors(TNGraph&, std::vector<std::vector<int>>&);
 
-    void Validate(std::vector<std::vector<int>>&, std::vector<bool>&, std::vector<int>&,
-                    int, std::vector<int>&);
+    void Validate(std::vector<std::vector<int>>&, std::vector<bool>&, std::vector<int>&, int, std::vector<int>&);
 
     std::vector<int> genComb(unsigned long, std::vector<int>, std::vector<int> &, unsigned long level);
 
@@ -59,17 +58,19 @@ namespace GD {
 
     void GetFrequencies(GD::GraphList*, std::map<std::multiset<unsigned long>, int>&);
 
-    void DiscoverMotifs(std::vector<std::map<std::multiset<unsigned long>, int>>&,
-                        std::vector<std::multiset<unsigned long>>&, std::vector<unsigned long>&,
-                        int, std::string, TNGraph&, GD::GraphList*);
+    void DiscoverMotifs(
+            std::vector<std::map<std::multiset<unsigned long>, int>>&, std::vector<std::multiset<unsigned long>>&,
+            std::vector<unsigned long>&, int, std::string, TNGraph&, GD::GraphList*);
 
     TNGraph* ConcatMotifs(TNGraph&, std::vector<std::multiset<unsigned long>>&, GD::GraphList*, GD::MetaObject*);
 
-    void ExportGDF(TNGraph&, std::vector<std::multiset<unsigned long>>*, std::vector<unsigned long>*,
-                    GD::GraphList*, std::string, GD::MetaObject*);
+    void ExportGDF(
+            TNGraph&, std::vector<std::multiset<unsigned long>>*, std::vector<unsigned long>*, GD::GraphList*,
+            std::string, GD::MetaObject*);
 
-    void PrintMotifs(TNGraph&, std::vector<std::multiset<unsigned long>>&, std::vector<unsigned long>&,
-                    GD::GraphList*, std::string, GD::MetaObject*);
+    void PrintMotifs(
+            TNGraph &, std::vector<std::multiset<unsigned long>> &, std::vector<unsigned long> &, GD::GraphList *,
+            std::string, GD::MetaObject *, bool);
 
 }
 

@@ -674,39 +674,67 @@ void GD::ExportGDF(TNGraph &G, std::vector<std::multiset<unsigned long>> *Motifs
 }
 
 void GD::PrintMotifs(TNGraph &G, std::vector<std::multiset<unsigned long>> &Motifs, std::vector<unsigned long> &IDs,
-                     GD::GraphList *kSubgraphs, std::string destination, GD::MetaObject *metaObj)
+                     GD::GraphList *kSubgraphs, std::string destination, GD::MetaObject *metaObj, bool expand)
 {
-    for(int m=0; m<Motifs.size(); m++) {
+    for (int m=0; m<Motifs.size(); m++) {
+
         PNGraph motif = TNGraph::New();
+        
+        PNGraph expanded;
+        if (expand) expanded = TNGraph::New();
+        
         kSubgraphs->cursor = kSubgraphs->ini->next;
-        while(kSubgraphs->cursor->label!=Motifs[m])
+        while (kSubgraphs->cursor->label!=Motifs[m])
             kSubgraphs->cursor = kSubgraphs->cursor->next;
 
-        for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
-            std::vector<int> *aux = metaObj->metaMap->find(kSubgraphs->cursor->vertices.at((size_t) i))->second;
-            for(std::vector<int>::iterator it = aux->begin(); it != aux->end(); ++it) {
-                if(motif->IsNode(*it)) continue;
-                motif->AddNode(*it);
+        std::vector<int> *v = &kSubgraphs->cursor->vertices;
+        
+        for (int i=0; i<v->size(); i++) {
+            motif->AddNode(v->at((size_t) i));
+            
+            if (expand) {
+                std::vector<int> *aux = metaObj->metaMap->find(v->at((size_t) i))->second;
+                for (std::vector<int>::iterator it = aux->begin(); it != aux->end(); ++it) {
+                    if (expanded->IsNode(*it)) continue;
+                    expanded->AddNode(*it);
+                }
             }
         }
-        for(int i=0; i<kSubgraphs->cursor->vertices.size(); i++) {
-            for(int j=0; j<kSubgraphs->cursor->vertices.size(); j++) {
-                std::vector<int> aux(*(metaObj->metaMap->find(kSubgraphs->cursor->vertices.at((size_t) i))->second));
-                std::vector<int> tmp(*(metaObj->metaMap->find(kSubgraphs->cursor->vertices.at((size_t) j))->second));
-                aux.insert(aux.end(), tmp.begin(), tmp.end());
-                for(std::vector<int>::iterator it0 = aux.begin(); it0 != aux.end(); ++it0) {
-                    for(std::vector<int>::iterator it1 = aux.begin(); it1 != aux.end(); ++it1) {
-                        if(*it0!=*it1 && metaObj->G->GetNI(*it0).IsOutNId(*it1)) {
-                            motif->AddEdge(*it0,*it1);
+        
+        for (int i=0; i<v->size(); i++) {
+            for (int j=0; j<v->size(); j++) {
+                
+                if (i!=j && G.GetNI(v->at((size_t) i)).IsOutNId(v->at((size_t) j))) {
+                    motif->AddEdge(v->at((size_t) i), v->at((size_t) j));
+                }
+                
+                if (expand) {
+                    std::vector<int> aux(*(metaObj->metaMap->find(v->at((size_t) i))->second));
+                    std::vector<int> tmp(*(metaObj->metaMap->find(v->at((size_t) j))->second));
+                    aux.insert(aux.end(), tmp.begin(), tmp.end());
+                    for (std::vector<int>::iterator it0 = aux.begin(); it0 != aux.end(); ++it0) {
+                        for (std::vector<int>::iterator it1 = aux.begin(); it1 != aux.end(); ++it1) {
+                            if (*it0 != *it1 && metaObj->G->GetNI(*it0).IsOutNId(*it1)) {
+                                expanded->AddEdge(*it0, *it1);
+                            }
                         }
                     }
                 }
             }
         }
+        
         std::stringstream ss;
         ss << destination << "motif_ID" << IDs[m] << ".png";
         std::string s = ss.str();
         const char* path = s.c_str();
-        //TSnap::DrawGViz(motif, gvlDot, path, "", NULL);
+        TSnap::DrawGViz<PNGraph>(motif, gvlDot, path, "", NULL);
+        
+        if (expand) {
+            std::stringstream ssE;
+            ssE << destination << "motif_ID" << IDs[m] << "-expanded.png";
+            std::string sE = ssE.str();
+            const char* pathE = sE.c_str();
+            TSnap::DrawGViz<PNGraph>(expanded, gvlDot, pathE, "", NULL);
+        }
     }
 }

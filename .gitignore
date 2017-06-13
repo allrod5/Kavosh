@@ -39,3 +39,4 @@ networks/
 results*/
 tests/
 .idea/
+cmake-build-debug/

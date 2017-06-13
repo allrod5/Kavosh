@@ -15,9 +15,10 @@ Compile with "g++ -Ofast -DDEBUG -march=native -flto -fwhole-program -o main mai
 
 struct KavoshData;
 void Kavosh(std::string, std::string, int, int, int, int);
-KavoshData Kavosh(PNGraph &, std::string, int, int, int, GD::MetaObject &, int);
-void proccessRandomNetwork(PNGraph, int, std::atomic_int*, int, std::vector<std::map<std::multiset<unsigned long>, int>>*,
-                           optionblk , int , set*);
+KavoshData Kavosh(PNGraph &, std::string, int, int, int, GD::MetaObject &, int, bool);
+void proccessRandomNetwork(
+        PNGraph, int, std::atomic_int*, int, std::vector<std::map<std::multiset<unsigned long>, int>>*, optionblk, int,
+        set*);
 
 int main(int argc, char* argv[]) {
 
@@ -161,12 +162,18 @@ void Kavosh(std::string source, std::string destination, int metamotifs, int mot
     GD::MetaObject metaObj(G);
     KavoshData kd(G, destination, metamotifs, motif_size, num_null_models, metaObj, t);
     while (kd.metamotifs>=0) {
-        kd = Kavosh(kd.G, kd.destination, kd.metamotifs, kd.motif_size, kd.num_null_models, *kd.metaObj, kd.t);
+        #ifdef DEBUG
+            std::cerr << "cycles left: " << kd.metamotifs << std::endl;
+            std::cerr << "graph: (" << kd.G->GetNodes() << ", " << kd.G->GetEdges() << ")" << std::endl;  
+        #endif
+        kd = Kavosh(
+                kd.G, kd.destination, kd.metamotifs, kd.motif_size, kd.num_null_models, *kd.metaObj, kd.t,
+                (kd.metamotifs != metamotifs));
     }
 }
 
 KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif_size, int num_null_models,
-            GD::MetaObject &metaObj, int t)
+                  GD::MetaObject &metaObj, int t, bool expand)
 {
 
     // FIXME: Cross-platform
@@ -250,12 +257,12 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
            finish_time - start_time, enum_time, class_time, freq_time, t11-t10);
 
     GD::ExportGDF(*G, &Motifs, &IDs, kSubgraphs, destination, &metaObj);
-    GD::PrintMotifs(*G, Motifs, IDs, kSubgraphs, destination, &metaObj);
+    GD::PrintMotifs(*G, Motifs, IDs, kSubgraphs, destination, &metaObj, expand);
 
     TNGraph *H = GD::ConcatMotifs(*G, Motifs, kSubgraphs, &metaObj);
     GD::ExportGDF(*G, NULL, NULL, NULL, destination, &metaObj);
     PNGraph H2 = H;
-    TSnap::SaveEdgeList(H2, "concatenated_motifs.txt");
+    //TSnap::SaveEdgeList(H2, "concatenated_motifs.txt");
     //Kavosh(H2, destination + "metamotifs/", metamotifs - 1, motif_size, num_null_models, metaObj, 0);
 
     return KavoshData(H2, destination + "metamotifs/", metamotifs - 1, motif_size, num_null_models, metaObj, t);
