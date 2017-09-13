@@ -77,7 +77,7 @@ def main(argv):
 					if mark[0] <= int(target):
 						gap += mark[1]
 				target = str(int(target)-gap)
-				
+
 				print(''.join(source+' '+target), file = edgelist)
 
 			if counter%10000 == 0:
