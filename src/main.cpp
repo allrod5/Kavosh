@@ -22,11 +22,11 @@ void proccessRandomNetwork(
 
 int main(int argc, char* argv[]) {
 
-#if !HAVE_TLS
-    fprintf(stderr,">E This program needs to be linked with a version\n");
-    fprintf(stderr,"  of nauty successfully configured with --enable-tls.\n");
-    exit(1);
-#endif
+    #if !HAVE_TLS
+        fprintf(stderr,">E This program needs to be linked with a version\n");
+        fprintf(stderr,"  of nauty successfully configured with --enable-tls.\n");
+        exit(1);
+    #endif
 
     if (argc == 2) {
         if (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help") {
@@ -144,8 +144,10 @@ struct KavoshData {
     GD::MetaObject *metaObj;
     int t;
 
-    KavoshData(PNGraph G, std::string destination, int metamotifs, int motif_size, int num_null_models,
-               GD::MetaObject metaObj, int t) {
+    KavoshData(
+            PNGraph G, std::string destination, int metamotifs, int motif_size, int num_null_models,
+            GD::MetaObject metaObj, int t)
+    {
         this->G = G;
         this->destination = destination;
         this->metamotifs = metamotifs;
@@ -241,10 +243,14 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
     class_time += t2-t1;
     freq_time += t3-t2;
 
-    for(int i=0; i<t; i++) threads.push_back(
-                std::thread(proccessRandomNetwork, G, motif_size, &shared_counter, num_null_models, &FVector, options, m, dnwork));
+    for (int i=0; i<t; i++) {
+        threads.push_back(std::thread(
+                proccessRandomNetwork, G, motif_size, &shared_counter, num_null_models, &FVector, options, m, dnwork));
+    }
 
-    for(auto& th : threads) th.join();
+    for (auto& th : threads) {
+        th.join();
+    }
 
     uint64 t10 = GetTimeMs64();
     GD::DiscoverMotifs(FVector, Motifs, IDs, motif_size, destination, *G, kSubgraphs);
@@ -268,9 +274,9 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
     return KavoshData(H2, destination + "metamotifs/", metamotifs - 1, motif_size, num_null_models, metaObj, t);
 }
 
-void proccessRandomNetwork(PNGraph G, int motif_size, std::atomic_int *counter, int num_null_models,
-                           std::vector<std::map<std::multiset<unsigned long>, int>> *FVector, optionblk options, int m,
-                           set *dnwork)
+void proccessRandomNetwork(
+        PNGraph G, int motif_size, std::atomic_int *counter, int num_null_models,
+        std::vector<std::map<std::multiset<unsigned long>, int>> *FVector, optionblk options, int m, set *dnwork)
 {
     uint64 t3 = GetTimeMs64();
     for(int pos = counter->fetch_add(1); pos <= num_null_models; pos = counter->fetch_add(1)) {
