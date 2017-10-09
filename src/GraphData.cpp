@@ -356,7 +356,7 @@ void GD::GetFrequencies(GD::GraphList* kSubgraphs, std::map<std::multiset<unsign
 void GD::DiscoverMotifs(
         std::vector<std::map<std::multiset<unsigned long>, int>> &FVector,
         std::vector<std::multiset<unsigned long>> &Motifs, std::vector<unsigned long> &IDs, int motif_size,
-        std::string destination, TNGraph &G, GD::GraphList *kSubgraphs)
+        std::string destination, TNGraph &G, GD::GraphList *kSubgraphs, GD::MetaObject *metaObj, bool expand)
 {
     std::map<std::multiset<unsigned long>, int>::iterator i;
     std::stringstream ss;
@@ -367,9 +367,18 @@ void GD::DiscoverMotifs(
     std::ofstream TXT;
     TXT.open(path);
 
+    std::ofstream ETXT;
+    if (expand) {
+        std::stringstream ess;
+        ess << destination << "expanded_adjacency_matrixes.txt";
+        std::string es = ess.str();
+        const char* epath = es.c_str();
+        ETXT.open(epath);
+    }
+
     TXT << "\t\t\t\t\t\t\t[Original Network]\t[\t\t\t\t\t\tRandom Networks\t\t\t\t\t\t\t]\n"
         << "ID\t\tAdjacency Matrix\tFrequency\t\tMean Frequency\t\tStandard Deviation\t\tZ-Score\t\t\tP-value\n";
-
+    
     for (i = FVector[0].begin(); i != FVector[0].end(); i++) {
         double MeanFrequency = 0.0;
         double StandardDeviation = 0.0;
@@ -413,6 +422,7 @@ void GD::DiscoverMotifs(
         unsigned long ID = 0;
         unsigned long maxpow = (unsigned long) motif_size * (unsigned long) motif_size - 1;
         bool adjMatrix[motif_size][motif_size];
+        std::vector<bool> expandedAdjMatrix[motif_size];
 
         for (int j=0; j<motif_size; j++) {
             for (int k=0; k<motif_size; k++) {
@@ -420,6 +430,18 @@ void GD::DiscoverMotifs(
                 if (G.GetNI(vertices->at((size_t) motif_size-1-j)).IsOutNId(vertices->at((size_t) motif_size-1-k))) {
                     adjMatrix[j][k] = true;
                     ID += (long) (pow(2, (maxpow - (j*motif_size+k))));
+                }
+            }
+            if (expand) {
+                std::vector<int> aux(*(metaObj->metaMap->find(vertices->at((size_t) j))->second));
+                for (std::vector<int>::iterator it0 = aux.begin(); it0 != aux.end(); ++it0) {
+                    for (std::vector<int>::iterator it1 = aux.begin(); it1 != aux.end(); ++it1) {
+                        if (*it0 != *it1 && metaObj->G->GetNI(*it0).IsOutNId(*it1)) {
+                            expandedAdjMatrix[j].push_back(1);
+                        } else {
+                            expandedAdjMatrix[j].push_back(0);
+                        }
+                    }
                 }
             }
         }
@@ -440,13 +462,37 @@ void GD::DiscoverMotifs(
         if (ID<999) {
             TXT << "\t";
         }
-
+        
         for (int j=0; j<motif_size; j++) {
             if (adjMatrix[0][j]) {
                 TXT << "1 ";
             } else {
                 TXT << "0 ";
             }
+        }
+
+        if (expand) {
+            ETXT << "ID " << ID << "\n";
+
+            for (int h=0; h<motif_size; h++) {
+                int expandedMatrixSize = (int) sqrt(expandedAdjMatrix[h].size());
+
+                for (int j = 0; j < expandedMatrixSize; j++) {
+                    ETXT << "\t\t";
+                    for (int k = 0; k < expandedMatrixSize; k++) {
+                        if (expandedAdjMatrix[h][j * expandedMatrixSize + k]) {
+                            ETXT << "1 ";
+                        } else {
+                            ETXT << "0 ";
+                        }
+                    }
+                    ETXT << "\n";
+                }
+                
+                ETXT << "\n";
+            }
+            
+            ETXT << "\n";
         }
 
         TXT << std::fixed << std::setprecision(2) << "\t\t\t"
@@ -491,6 +537,10 @@ void GD::DiscoverMotifs(
 
     TXT.close();
 
+    if (expand) {
+        ETXT.close();
+    }
+    
     #ifdef DEBUG
         if (DEBUG_LEVEL>=0) {
             for (int i=0; i<Motifs.size(); i++) {

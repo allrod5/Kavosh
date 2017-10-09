@@ -144,8 +144,10 @@ struct KavoshData {
     GD::MetaObject *metaObj;
     int t;
 
-    KavoshData(PNGraph G, std::string destination, int metamotifs, int motif_size, int num_null_models,
-               GD::MetaObject metaObj, int t) {
+    KavoshData(
+            PNGraph G, std::string destination, int metamotifs, int motif_size, int num_null_models,
+            GD::MetaObject metaObj, int t)
+    {
         this->G = G;
         this->destination = destination;
         this->metamotifs = metamotifs;
@@ -172,8 +174,9 @@ void Kavosh(std::string source, std::string destination, int metamotifs, int mot
     }
 }
 
-KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif_size, int num_null_models,
-                  GD::MetaObject &metaObj, int t, bool expand)
+KavoshData Kavosh(
+        PNGraph &G, std::string destination, int metamotifs, int motif_size, int num_null_models,
+        GD::MetaObject &metaObj, int t, bool expand)
 {
 
     // FIXME: Cross-platform
@@ -247,7 +250,7 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
     for(auto& th : threads) th.join();
 
     uint64 t10 = GetTimeMs64();
-    GD::DiscoverMotifs(FVector, Motifs, IDs, motif_size, destination, *G, kSubgraphs);
+    GD::DiscoverMotifs(FVector, Motifs, IDs, motif_size, destination, *G, kSubgraphs, &metaObj, expand);
     uint64 t11 = GetTimeMs64();
 
     uint64 finish_time = GetTimeMs64();
@@ -268,9 +271,9 @@ KavoshData Kavosh(PNGraph &G, std::string destination, int metamotifs, int motif
     return KavoshData(H2, destination + "metamotifs/", metamotifs - 1, motif_size, num_null_models, metaObj, t);
 }
 
-void proccessRandomNetwork(PNGraph G, int motif_size, std::atomic_int *counter, int num_null_models,
-                           std::vector<std::map<std::multiset<unsigned long>, int>> *FVector, optionblk options, int m,
-                           set *dnwork)
+void proccessRandomNetwork(
+        PNGraph G, int motif_size, std::atomic_int *counter, int num_null_models,
+        std::vector<std::map<std::multiset<unsigned long>, int>> *FVector, optionblk options, int m, set *dnwork)
 {
     uint64 t3 = GetTimeMs64();
     for(int pos = counter->fetch_add(1); pos <= num_null_models; pos = counter->fetch_add(1)) {

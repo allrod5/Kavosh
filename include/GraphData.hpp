@@ -59,8 +59,8 @@ namespace GD {
     void GetFrequencies(GD::GraphList*, std::map<std::multiset<unsigned long>, int>&);
 
     void DiscoverMotifs(
-            std::vector<std::map<std::multiset<unsigned long>, int>>&, std::vector<std::multiset<unsigned long>>&,
-            std::vector<unsigned long>&, int, std::string, TNGraph&, GD::GraphList*);
+            std::vector<std::map<std::multiset<unsigned long>, int>> &, std::vector<std::multiset<unsigned long>> &,
+            std::vector<unsigned long> &, int, std::string, TNGraph &, GD::GraphList *, GD::MetaObject *, bool);
 
     TNGraph* ConcatMotifs(TNGraph&, std::vector<std::multiset<unsigned long>>&, GD::GraphList*, GD::MetaObject*);
 
